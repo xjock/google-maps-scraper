@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Maps Scraper</title>
+    <title>Google Maps 智能爬虫系统</title>
     <link rel="stylesheet" href="/static/css/main.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.6/htmx.min.js"></script>
     
@@ -12,6 +12,9 @@
 
     <style>
         /* 针对新布局的微调样式 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
         .content {
             display: flex;
             flex-direction: column;
@@ -42,7 +45,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            z-index: 1000; /* 确保 header 在地图之上 */
+            z-index: 1000;
         }
 
         .map-header span.tip {
@@ -65,6 +68,8 @@
             margin-bottom: 16px;
             font-size: 1.25rem;
             color: var(--color-text);
+            border-left: 4px solid #0084ff;
+            padding-left: 10px;
         }
         
         .btn-submit {
@@ -73,21 +78,38 @@
             padding: 12px; 
             font-size: 1.1em;
             cursor: pointer;
+            background-color: #0084ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .btn-submit:hover {
+            background-color: #006bce;
         }
 
-        /* 修复 Leaflet 在 Flex 布局下的层级和小问题 */
         #map {
             flex: 1;
             width: 100%;
             z-index: 1;
+        }
+        
+        /* 汉化 Leaflet Draw 的默认提示框文字 */
+        .leaflet-draw-tooltip {
+            font-family: inherit;
         }
     </style>
 </head>
 <body>
     <div class="app-container">
         <header>
-            <h1>地图POI拾取 (OSM版)</h1>
-        </header>
+            <h1>🌍 跨境地图数据拾取系统</h1>
+            <nav>
+                <a href="/api/docs" target="_blank" rel="noopener noreferrer" style="color: #666; text-decoration: none; font-weight: 500;">API 文档</a>
+            </nav>
+        </header>        
+
         <main>
             <div class="sidebar">
                 <div id="error-container" class="error-message"></div>
@@ -101,96 +123,102 @@
                 >
                     
                     <fieldset>
-                        <legend>Job Details</legend>
+                        <legend>📌 基础任务设置</legend>
                         <div class="form-group">
-                            <label for="name">Job Name:</label>
-                            <input type="text" id="name" name="name" value="{{.Name}}">
+                            <label for="name">任务名称 (必填):</label>
+                            <input type="text" id="name" name="name" value="{{.Name}}" placeholder="如：洛杉矶咖啡店采集">
                         </div>
                         <div class="form-group">
-                            <label for="keywords">Keywords:</label>
-                            <textarea id="keywords" name="keywords" rows="6">{{ .KeywordsString }}</textarea>
+                            <label for="keywords">搜索关键词 (每行一个):</label>
+                            <textarea id="keywords" name="keywords" rows="5" placeholder="coffee shop&#10;cafe&#10;starbucks">{{ .KeywordsString }}</textarea>
                         </div>
                         <div class="form-group">
-                            <label for="lang">Language:</label>
-                            <input type="text" id="lang" name="lang" value="{{.Language}}">
+                            <label for="lang">结果语言 (如 zh-CN, en):</label>
+                            <input type="text" id="lang" name="lang" value="en" placeholder="推荐使用 en 获取最准数据">
                         </div>
                     </fieldset>
                     
                     <details class="expandable-section" open>
-                        <summary>Location Sync (From Map)</summary>
+                        <summary>📍 地理坐标同步区</summary>
                         <fieldset>
-                            <p style="font-size: 0.85em; color: #666; margin-top: 0;">请在右侧地图框选区域，坐标将自动同步到下方。</p>
+                            <p style="font-size: 0.85em; color: #666; margin-top: 0; line-height: 1.4;">请在右侧地图上画出要采集的区域，系统会自动计算中心坐标和覆盖半径。</p>
                             <div class="form-group">
-                                <label for="zoom">Zoom:</label>
-                                <input type="number" id="zoom" name="zoom" value="{{.Zoom}}" readonly style="background-color: #f5f5f5;">
+                                <label for="zoom">地图层级 (Zoom):</label>
+                                <input type="number" id="zoom" name="zoom" value="{{.Zoom}}" readonly style="background-color: #f0f2f5; color: #666; cursor: not-allowed;">
                             </div>
                             <div class="form-group">
-                                <label for="latitude">Latitude (Center):</label>
-                                <input type="number" step="0.000000000000001" id="latitude" name="latitude" value="{{.Lat}}" readonly style="background-color: #f5f5f5;">
+                                <label for="latitude">中心纬度 (Lat):</label>
+                                <input type="number" step="0.000000000000001" id="latitude" name="latitude" value="{{.Lat}}" readonly style="background-color: #f0f2f5; color: #666; cursor: not-allowed;">
                             </div>
                             <div class="form-group">
-                                <label for="longitude">Longitude (Center):</label>
-                                <input type="number" step="0.000000000000001" id="longitude" name="longitude" value="{{.Lon}}" readonly style="background-color: #f5f5f5;">
+                                <label for="longitude">中心经度 (Lon):</label>
+                                <input type="number" step="0.000000000000001" id="longitude" name="longitude" value="{{.Lon}}" readonly style="background-color: #f0f2f5; color: #666; cursor: not-allowed;">
                             </div>
                             <div class="form-group">
-                                <label for="radius">Radius (Meters):</label>
-                                <input type="number" id="radius" name="radius" value="{{.Radius}}" readonly style="background-color: #f5f5f5;">
+                                <label for="radius">外接圆半径 (米):</label>
+                                <input type="number" id="radius" name="radius" value="{{.Radius}}" readonly style="background-color: #e8f0fe; color: #0084ff; font-weight: bold; cursor: not-allowed;">
                             </div>
                         </fieldset>
                     </details>
                     
                     <details class="expandable-section">
-                        <summary>Advanced Options</summary>
+                        <summary>⚙️ 深度抓取选项</summary>
                         <fieldset>
                             <div class="form-group">
-                                <label for="fastmode">Fast Mode (BETA):</label>
+                                <label for="fastmode">急速模式 (Fast Mode):</label>
                                 <input type="checkbox" id="fastmode" name="fastmode" {{if .FastMode}}checked{{end}}>
+                                <small style="display:block; color:#888; margin-top:4px;">勾选后不再进入商家详情页，仅抓取列表概览数据。</small>
                             </div>
-                            <div class="form-group">
-                                <label for="depth">Depth:</label>
-                                <input type="number" step="1" id="depth" name="depth" value="{{.Depth}}">
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label for="depth">下拉翻页深度 (Depth):</label>
+                                <input type="number" step="1" id="depth" name="depth" value="{{if .Depth}}{{.Depth}}{{else}}10{{end}}">
                             </div>
-                            <div class="form-group checkbox">
+                            <div class="form-group checkbox" style="margin-top: 15px;">
                                 <input type="checkbox" id="email" name="email" {{if .Email}}checked{{end}}>
-                                <label for="email">Fetch Emails</label>
+                                <label for="email" style="display:inline; font-weight:bold;">深度爬取商家官网邮箱</label>
                             </div>
-                            <div class="form-group">
-                                <label for="maxtime">Max job time:</label>
-                                <input type="text" id="maxtime" name="maxtime" value="{{.MaxTime}}">
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label for="maxtime">任务超时阈值:</label>
+                                <input type="text" id="maxtime" name="maxtime" value="{{if .MaxTime}}{{.MaxTime}}{{else}}30m{{end}}" placeholder="如 10m, 1h">
                             </div>
                         </fieldset>
                     </details>
                     
                     <details class="expandable-section">
-                        <summary>Proxies</summary>
+                        <summary>🌐 代理 IP 配置</summary>
                         <fieldset>
                             <div class="form-group">
-                                <label for="proxies">Proxies:(one per line)</label>
-                                <textarea id="proxies" name="proxies" rows="3">{{.ProxiesString}}</textarea>
+                                <label for="proxies">代理池 (每行一个):</label>
+                                <p class="text-muted" style="line-height: 1.4;"><small>支持格式示例:<br>
+                                        HTTP/HTTPS: <code>http://user:pass@127.0.0.1:8080</code><br>
+                                        SOCKS5: <code>socks5://127.0.0.1:1080</code>
+                                </small></p>
+                                <textarea id="proxies" name="proxies" rows="4" placeholder="留空则使用本机当前网络">{{.ProxiesString}}</textarea>
                             </div>
                         </fieldset>
                     </details>
                     
-                    <button type="submit" class="btn-submit">Start Scraping</button>
+                    <button type="submit" class="btn-submit">🚀 开始执行抓取任务</button>
                 </form>
             </div>
 
             <div class="content">
+                
                 <div class="map-section">
                     <div id="map"></div>
                 </div>
 
                 <div class="table-section">
-                    <h2>Recent Jobs</h2>
+                    <h2>📋 任务运行队列</h2>
                     <div id="spinner" class="spinner"></div>
                     <table id="job-table">
                         <thead>
                             <tr>
-                                <th>Job ID</th>
-                                <th>Job Name</th>
-                                <th>Job Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th>任务 ID</th>
+                                <th>任务名称</th>
+                                <th>创建时间</th>
+                                <th>运行状态</th>
+                                <th>操作 (下载/删除)</th>
                             </tr>
                         </thead>
                         <tbody hx-get="/jobs" hx-trigger="load, every 10s">
@@ -209,40 +237,59 @@ let map;
 let drawnItems;
 let currentLayer = null;
 
+// 汉化 Leaflet.draw 的提示语言
+L.drawLocal.draw.toolbar.actions.title = '取消画图';
+L.drawLocal.draw.toolbar.actions.text = '取消';
+L.drawLocal.draw.toolbar.finish.title = '完成画图';
+L.drawLocal.draw.toolbar.finish.text = '完成';
+L.drawLocal.draw.toolbar.undo.title = '删除最后画的点';
+L.drawLocal.draw.toolbar.undo.text = '删除最后一点';
+L.drawLocal.draw.handlers.polygon.tooltip.start = '点击开始绘制多边形区域';
+L.drawLocal.draw.handlers.polygon.tooltip.cont = '点击继续绘制';
+L.drawLocal.draw.handlers.polygon.tooltip.end = '点击起点闭合多边形';
+L.drawLocal.draw.handlers.rectangle.tooltip.start = '按住鼠标拖拽绘制矩形区域';
+L.drawLocal.draw.handlers.circle.tooltip.start = '按住鼠标拖拽绘制圆形区域';
+L.drawLocal.edit.toolbar.actions.save.title = '保存修改';
+L.drawLocal.edit.toolbar.actions.save.text = '保存';
+L.drawLocal.edit.toolbar.actions.cancel.title = '取消修改';
+L.drawLocal.edit.toolbar.actions.cancel.text = '取消';
+L.drawLocal.edit.handlers.edit.tooltip.text = '拖拽节点以编辑形状';
+L.drawLocal.edit.handlers.remove.tooltip.text = '点击形状将其删除';
+
 document.addEventListener('DOMContentLoaded', function() {
     const latInput = document.getElementById('latitude');
     const lonInput = document.getElementById('longitude');
     
+    // 默认定位到北京，如果没有初始值
     const initialLat = parseFloat(latInput.value) || 39.9042; 
     const initialLon = parseFloat(lonInput.value) || 116.4074;
-    const initialZoom = parseInt(document.getElementById('zoom').value) || 10;
+    const initialZoom = parseInt(document.getElementById('zoom').value) || 12;
 
-    // 1. 初始化 Leaflet 地图
+    // 初始化地图
     map = L.map('map').setView([initialLat, initialLon], initialZoom);
 
-    // 2. 加载完全免费的 OpenStreetMap 瓦片
+    // 加载 OSM 免费瓦片底图
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        attribution: '&copy; OpenStreetMap',
         maxZoom: 19
     }).addTo(map);
 
-    // 3. 初始化绘图图层组
     drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
 
-    // 4. 配置绘图控制面板
+    // 配置左侧的画图控制面板
     const drawControl = new L.Control.Draw({
+        position: 'topleft',
         draw: {
-            polyline: false, // 禁用画线
-            marker: false,   // 禁用标记点
+            polyline: false, // 禁用画线（不符合区域采集逻辑）
+            marker: false,   // 禁用点位标记
             circlemarker: false,
             polygon: {
-                allowIntersection: false,
-                drawError: { color: '#e1e100', message: '<strong>Oh snap!<strong> you can\'t draw that!' },
-                shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.2 }
+                allowIntersection: false, // 不允许线条交叉
+                shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.15 }
             },
-            rectangle: { shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.2 } },
-            circle: { shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.2 } }
+            rectangle: { shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.15 } },
+            circle: { shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.15 } }
         },
         edit: {
             featureGroup: drawnItems,
@@ -251,19 +298,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     map.addControl(drawControl);
 
-    // 5. 监听绘制完成事件
+    // 监听：画图完成
     map.on(L.Draw.Event.CREATED, function (event) {
         const layer = event.layer;
         const type = event.layerType;
 
-        drawnItems.clearLayers(); // 清除上一个图形，保持单选
+        drawnItems.clearLayers(); // 确保地图上只有一个采集区域
         drawnItems.addLayer(layer);
         currentLayer = layer;
 
         updateFromLayer(layer, type);
     });
 
-    // 6. 监听图形被编辑（拖拽边缘改变大小）事件
+    // 监听：编辑已有图形（改变大小）
     map.on(L.Draw.Event.EDITED, function (event) {
         const layers = event.layers;
         layers.eachLayer(function (layer) {
@@ -275,13 +322,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 7. 监听地图缩放
+    // 监听：地图层级缩放
     map.on('zoomend', function() {
         document.getElementById('zoom').value = map.getZoom();
     });
 });
 
-// 计算中心点和降维半径
+// 核心几何降维算法：将所有图形转化为中心点和最大外接圆半径
 function updateFromLayer(layer, type) {
     let centerLat, centerLng, radius = 0;
 
@@ -291,16 +338,14 @@ function updateFromLayer(layer, type) {
         centerLng = center.lng;
         radius = layer.getRadius();
     } else {
-        // 多边形或矩形处理逻辑：寻找几何中心，并寻找距离最远的顶点作为外接圆半径
         const bounds = layer.getBounds();
         const center = bounds.getCenter();
         centerLat = center.lat;
         centerLng = center.lng;
 
-        // Leaflet.draw 产生的是嵌套数组，取第一个闭环
         const latlngs = layer.getLatLngs()[0];
         latlngs.forEach(ll => {
-            const dist = map.distance(center, ll); // 计算地球表面两点距离（米）
+            const dist = map.distance(center, ll);
             if (dist > radius) radius = dist;
         });
     }
@@ -309,8 +354,9 @@ function updateFromLayer(layer, type) {
 }
 
 function updateFormInputs(lat, lng, radius, zoom) {
-    document.getElementById('latitude').value = lat.toFixed(7);
-    document.getElementById('longitude').value = lng.toFixed(7);
+    document.getElementById('latitude').value = lat.toFixed(6);
+    document.getElementById('longitude').value = lng.toFixed(6);
+    // 半径取整为米
     document.getElementById('radius').value = Math.round(radius);
     document.getElementById('zoom').value = zoom;
 }
