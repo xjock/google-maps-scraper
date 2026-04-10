@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps Scraper</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.6/htmx.min.js"></script>
+    <style>
+        /* 针对新布局的微调样式 */
+        .content {
+            display: flex;
+            flex-direction: column;
+            gap: 24px; /* 地图和表格之间的间距 */
+            padding: 24px 32px;
+            background-color: #f8f9fa; /* 稍微深一点的背景色衬托卡片 */
+        }
+        
+        .map-section {
+            /* 删除了 flex: 0 0 500px; 和 display: flex; */
+            height: 800px; /* 强制绝对高度 */
+            min-height: 800px; 
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+            border: 1px solid var(--color-border);
+            position: relative; /* 关键：给地图提供绝对定位参考 */
+        }
+
+        .map-header {
+            padding: 12px 20px;
+            background-color: white;
+            border-bottom: 1px solid var(--color-border);
+            font-weight: 600;
+            color: var(--color-text);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .map-header span.tip {
+            font-size: 0.85em;
+            color: #666;
+            font-weight: normal;
+        }
+
+        .table-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid var(--color-border);
+            flex: 1; /* 占据剩下的空间 */
+        }
+
+        .table-section h2 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 1.25rem;
+            color: var(--color-text);
+        }
+        
+        /* 侧边栏按钮样式优化 */
+        .btn-submit {
+            margin-top: 15px; 
+            width: 100%; 
+            padding: 12px; 
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>地图POI拾取</h1>
+        </header>
+        <main>
+            <div class="sidebar">
+                <div id="error-container" class="error-message"></div>
+                <form 
+                    hx-post="/scrape" 
+                    hx-target="#job-table tbody" 
+                    hx-swap="beforeend"
+                    hx-indicator="#spinner"
+                    hx-on::before-request="document.getElementById('error-container').innerHTML = ''"
+                    hx-on::after-request="if(!event.detail.successful) document.getElementById('error-container').innerHTML = event.detail.xhr.responseText"
+                >
+                    
+                    <fieldset>
+                        <legend>Job Details</legend>
+                        <div class="form-group">
+                            <label for="name">Job Name:</label>
+                            <input type="text" id="name" name="name" value="{{.Name}}">
+                        </div>
+                        <div class="form-group">
+                            <label for="keywords">Keywords:</label>
+                            <textarea id="keywords" name="keywords" rows="6">{{ .KeywordsString }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="lang">Language:</label>
+                            <input type="text" id="lang" name="lang" value="{{.Language}}">
+                        </div>
+                    </fieldset>
+                    
+                    <details class="expandable-section" open>
+                        <summary>Location Sync (From Map)</summary>
+                        <fieldset>
+                            <p style="font-size: 0.85em; color: #666; margin-top: 0;">请在右侧地图框选区域，坐标将自动同步到下方。</p>
+                            <div class="form-group">
+                                <label for="zoom">Zoom:</label>
+                                <input type="number" id="zoom" name="zoom" value="{{.Zoom}}" readonly style="background-color: #f5f5f5;">
+                            </div>
+                            <div class="form-group">
+                                <label for="latitude">Latitude (Center):</label>
+                                <input type="number" step="0.000000000000001" id="latitude" name="latitude" value="{{.Lat}}" readonly style="background-color: #f5f5f5;">
+                            </div>
+                            <div class="form-group">
+                                <label for="longitude">Longitude (Center):</label>
+                                <input type="number" step="0.000000000000001" id="longitude" name="longitude" value="{{.Lon}}" readonly style="background-color: #f5f5f5;">
+                            </div>
+                            <div class="form-group">
+                                <label for="radius">Radius (Meters):</label>
+                                <input type="number" id="radius" name="radius" value="{{.Radius}}" readonly style="background-color: #f5f5f5;">
+                            </div>
+                        </fieldset>
+                    </details>
+                    
+                    <details class="expandable-section">
+                        <summary>Advanced Options</summary>
+                        <fieldset>
+                            <div class="form-group">
+                                <label for="fastmode">Fast Mode (BETA):</label>
+                                <input type="checkbox" id="fastmode" name="fastmode" {{if .FastMode}}checked{{end}}>
+                            </div>
+                            <div class="form-group">
+                                <label for="depth">Depth:</label>
+                                <input type="number" step="1" id="depth" name="depth" value="{{.Depth}}">
+                            </div>
+                            <div class="form-group checkbox">
+                                <input type="checkbox" id="email" name="email" {{if .Email}}checked{{end}}>
+                                <label for="email">Fetch Emails</label>
+                            </div>
+                            <div class="form-group">
+                                <label for="maxtime">Max job time:</label>
+                                <input type="text" id="maxtime" name="maxtime" value="{{.MaxTime}}">
+                            </div>
+                        </fieldset>
+                    </details>
+                    
+                    <details class="expandable-section">
+                        <summary>Proxies</summary>
+                        <fieldset>
+                            <div class="form-group">
+                                <label for="proxies">Proxies:(one per line)</label>
+                                <p class="text-muted"><small>Examples:<br>
+                                        <p>HTTPS: https://user:pass@proxy:443</p>
+                                        <p>SOCKS5: socks5://127.0.0.1:8000</p>
+                                </small></p>
+                                <textarea id="proxies" name="proxies" rows="3">{{.ProxiesString}}</textarea>
+                            </div>
+                        </fieldset>
+                    </details>
+                    
+                    <button type="submit" class="btn-submit">Start Scraping</button>
+                </form>
+            </div>
+
+            <div class="content">
+                
+                <div class="map-section">
+                    <div id="map" style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%;"></div>
+                </div>
+
+                <div class="table-section">
+                    <h2>Recent Jobs</h2>
+                    <div id="spinner" class="spinner"></div>
+                    <table id="job-table">
+                        <thead>
+                            <tr>
+                                <th>Job ID</th>
+                                <th>Job Name</th>
+                                <th>Job Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody hx-get="/jobs" hx-trigger="load, every 10s">
+                            </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+<script>
+function hideSponsor() {
+    const sponsorSection = document.getElementById('sponsor-section');
+    if (sponsorSection) {
+        sponsorSection.style.display = 'none';
+    }
+}
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxzhMohIbpyThAbgtP1ZS3LC2qYmVCKf8&libraries=drawing,geometry&callback=initMap" async defer></script>
+<script>
+let map;
+let drawingManager;
+let currentOverlay = null;
+
+function initMap() {
+    // 1. Initialize map
+    const initialLat = parseFloat(document.getElementById('latitude').value) || 39.9042; // Default to Beijing if empty
+    const initialLon = parseFloat(document.getElementById('longitude').value) || 116.4074;
+    const initialZoom = parseInt(document.getElementById('zoom').value) || 10;
+
+    map = new google.maps.Map(document.getElementById('map'), {
+        center: {lat: initialLat, lng: initialLon},
+        zoom: initialZoom,
+        mapTypeControl: true, // 开启卫星图切换控件
+        mapTypeControlOptions: {
+            position: google.maps.ControlPosition.TOP_RIGHT
+        },
+        streetViewControl: false, // 关闭街景控件
+        // 👇 新增这一行：开启贪婪模式，拦截所有鼠标滚轮和触摸手势
+        gestureHandling: 'greedy'
+        
+    });
+
+    // 2. Initialize Drawing Manager
+    drawingManager = new google.maps.drawing.DrawingManager({
+        drawingMode: null, 
+        drawingControl: true,
+        drawingControlOptions: {
+            position: google.maps.ControlPosition.TOP_CENTER,
+            drawingModes: [
+                google.maps.drawing.OverlayType.CIRCLE,
+                google.maps.drawing.OverlayType.RECTANGLE,
+                google.maps.drawing.OverlayType.POLYGON
+            ],
+        },
+        circleOptions: { fillColor: '#0084ff', fillOpacity: 0.2, strokeWeight: 2, editable: true },
+        rectangleOptions: { fillColor: '#0084ff', fillOpacity: 0.2, strokeWeight: 2, editable: true },
+        polygonOptions: { fillColor: '#0084ff', fillOpacity: 0.2, strokeWeight: 2, editable: true }
+    });
+
+    drawingManager.setMap(map);
+
+    // 3. Listen for drawing completion
+    google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+        if (currentOverlay) {
+            currentOverlay.setMap(null);
+        }
+        currentOverlay = event.overlay;
+        drawingManager.setDrawingMode(null); // Switch back to hand pointer
+
+        let centerLat, centerLng, radius;
+
+        if (event.type === 'circle') {
+            const center = event.overlay.getCenter();
+            centerLat = center.lat();
+            centerLng = center.lng();
+            radius = event.overlay.getRadius();
+
+            google.maps.event.addListener(currentOverlay, 'radius_changed', updateFormFromCircle);
+            google.maps.event.addListener(currentOverlay, 'center_changed', updateFormFromCircle);
+
+        } else if (event.type === 'rectangle') {
+            const bounds = event.overlay.getBounds();
+            const center = bounds.getCenter();
+            const corner = bounds.getNorthEast();
+            centerLat = center.lat();
+            centerLng = center.lng();
+            radius = google.maps.geometry.spherical.computeDistanceBetween(center, corner);
+
+        } else if (event.type === 'polygon') {
+            const path = event.overlay.getPath();
+            let latSum = 0, lngSum = 0;
+            
+            path.forEach(function(latLng) {
+                latSum += latLng.lat();
+                lngSum += latLng.lng();
+            });
+            centerLat = latSum / path.getLength();
+            centerLng = lngSum / path.getLength();
+            const center = new google.maps.LatLng(centerLat, centerLng);
+
+            radius = 0;
+            path.forEach(function(latLng) {
+                const dist = google.maps.geometry.spherical.computeDistanceBetween(center, latLng);
+                if (dist > radius) radius = dist;
+            });
+        }
+
+        updateFormInputs(centerLat, centerLng, radius, map.getZoom());
+    });
+    
+    // Listen for manual zoom changes
+    map.addListener('zoom_changed', function() {
+        document.getElementById('zoom').value = map.getZoom();
+    });
+}
+
+function updateFormFromCircle() {
+    if (currentOverlay) {
+        updateFormInputs(
+            currentOverlay.getCenter().lat(),
+            currentOverlay.getCenter().lng(),
+            currentOverlay.getRadius(),
+            map.getZoom()
+        );
+    }
+}
+
+function updateFormInputs(lat, lng, radius, zoom) {
+    document.getElementById('latitude').value = lat.toFixed(7);
+    document.getElementById('longitude').value = lng.toFixed(7);
+    document.getElementById('radius').value = Math.round(radius);
+    document.getElementById('zoom').value = zoom;
+}
+</script>
+</body>
+</html>
