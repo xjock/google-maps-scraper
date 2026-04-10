@@ -141,10 +141,18 @@
                     <details class="expandable-section" open>
                         <summary>📍 地理坐标同步区</summary>
                         <fieldset>
-                            <p style="font-size: 0.85em; color: #666; margin-top: 0; line-height: 1.4;">请在右侧地图上画出要采集的区域，系统会自动计算中心坐标和覆盖半径。</p>
+                            <p style="font-size: 0.85em; color: #666; margin-top: 0; line-height: 1.4;">请在右侧地图上画出要采集的区域，系统会自动计算中心坐标和边界数据。</p>
                             <div class="form-group">
                                 <label for="zoom">地图层级 (Zoom):</label>
-                                <input type="number" id="zoom" name="zoom" value="{{.Zoom}}" readonly style="background-color: #f0f2f5; color: #666; cursor: not-allowed;">
+                                <select id="zoom" name="zoom" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; font-size: 14px;">
+                                    <option value="12">12 (城市/区级)</option>
+                                    <option value="13">13</option>
+                                    <option value="14" selected>14 (街道级)</option>
+                                    <option value="15">15</option>
+                                    <option value="16">16 (社区级)</option>
+                                    <option value="17">17</option>
+                                    <option value="18">18 (建筑/精细级)</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label for="latitude">中心纬度 (Lat):</label>
@@ -155,8 +163,8 @@
                                 <input type="number" step="0.000000000000001" id="longitude" name="longitude" value="{{.Lon}}" readonly style="background-color: #f0f2f5; color: #666; cursor: not-allowed;">
                             </div>
                             <div class="form-group">
-                                <label for="radius">外接圆半径 (米):</label>
-                                <input type="number" id="radius" name="radius" value="{{.Radius}}" readonly style="background-color: #e8f0fe; color: #0084ff; font-weight: bold; cursor: not-allowed;">
+                                <label for="geojson">绘制图形 (GeoJSON):</label>
+                                <textarea id="geojson" name="geojson" rows="5" readonly style="background-color: #e8f0fe; color: #0084ff; font-family: monospace; font-size: 12px; cursor: not-allowed; resize: vertical;"></textarea>
                             </div>
                         </fieldset>
                     </details>
@@ -328,36 +336,43 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// 核心几何降维算法：将所有图形转化为中心点和最大外接圆半径
+// 获取图形信息并提取 GeoJSON 字符串
 function updateFromLayer(layer, type) {
-    let centerLat, centerLng, radius = 0;
+    let centerLat, centerLng;
 
+    // 获取中心点坐标（保持纬度和经度的中心点显示）
     if (type === 'circle') {
         const center = layer.getLatLng();
         centerLat = center.lat;
         centerLng = center.lng;
-        radius = layer.getRadius();
     } else {
         const bounds = layer.getBounds();
         const center = bounds.getCenter();
         centerLat = center.lat;
         centerLng = center.lng;
-
-        const latlngs = layer.getLatLngs()[0];
-        latlngs.forEach(ll => {
-            const dist = map.distance(center, ll);
-            if (dist > radius) radius = dist;
-        });
     }
 
-    updateFormInputs(centerLat, centerLng, radius, map.getZoom());
+    // 调用 Leaflet 的原生 toGeoJSON 方法
+    let geojson = layer.toGeoJSON();
+    
+    // 特殊处理：标准 GeoJSON 不支持严格意义上的"圆形"，默认输出为 Point。
+    // 这里我们将半径(radius)附加上去，保证数据不丢失。
+    if (type === 'circle') {
+        geojson.properties = geojson.properties || {};
+        geojson.properties.radius = Math.round(layer.getRadius());
+        geojson.properties.type = 'circle';
+    }
+
+    // 格式化为带有缩进的字符串
+    const geojsonStr = JSON.stringify(geojson, null, 2);
+
+    updateFormInputs(centerLat, centerLng, geojsonStr, map.getZoom());
 }
 
-function updateFormInputs(lat, lng, radius, zoom) {
+function updateFormInputs(lat, lng, geojsonStr, zoom) {
     document.getElementById('latitude').value = lat.toFixed(6);
     document.getElementById('longitude').value = lng.toFixed(6);
-    // 半径取整为米
-    document.getElementById('radius').value = Math.round(radius);
+    document.getElementById('geojson').value = geojsonStr;
     document.getElementById('zoom').value = zoom;
 }
 </script>
