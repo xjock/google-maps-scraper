@@ -1,10 +1,10 @@
 // Package api provides the HTTP API for Google Maps Scraper Pro.
 //
-// @title Google Maps Scraper Pro API
+// @title Google Maps 抓取 Pro API
 // @version 1.0
-// @description API for scraping Google Maps data asynchronously
+// @description 用于异步抓取 Google Maps 数据的 API
 //
-// @contact.name API Support
+// @contact.name API 支持
 // @contact.url https://github.com/gosom/google-maps-scraper
 //
 // @license.name MIT

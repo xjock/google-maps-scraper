@@ -11,39 +11,39 @@ import (
 type GmapData any
 
 // ErrorResponse represents an error response
-// @Description Error response returned when a request fails
+// @Description 请求失败时返回的错误响应
 type ErrorResponse struct {
 	Message string `json:"message" example:"invalid request body"`
 }
 
 // HealthCheckResponse represents a health check response
-// @Description Health check response indicating service status
+// @Description 指示服务状态的健康检查响应
 type HealthCheckResponse struct {
 	Status string `json:"status" example:"ok"`
 }
 
 // ScrapeRequest represents a request to scrape Google Maps
-// @Description Request body for submitting a scrape job
+// @Description 提交抓取任务的请求体
 type ScrapeRequest struct {
-	// Search keyword (e.g., "restaurants in New York")
+	// 搜索关键词（例如："纽约的餐厅"）
 	Keyword string `json:"keyword" example:"restaurants in New York"`
-	// Language code for results (default: "en")
-	Lang string `json:"lang,omitempty" example:"en"`
-	// Maximum depth for pagination (default: 1, max: 100)
+	// 结果语言代码（默认："zh-CN"）
+	Lang string `json:"lang,omitempty" example:"zh-CN"`
+	// 分页的最大深度（默认：1，最大：100）
 	MaxDepth int `json:"max_depth,omitempty" example:"1"`
-	// Whether to extract email addresses from websites
+	// 是否从网站中提取电子邮件地址
 	Email bool `json:"email,omitempty" example:"false"`
-	// Geographic coordinates in "lat,lon" format
+	// 地理坐标，格式为 "纬度,经度"
 	GeoCoordinates string `json:"geo_coordinates,omitempty" example:"40.7128,-74.0060"`
-	// Zoom level for map search (1-21)
+	// 地图搜索缩放级别 (1-21)
 	Zoom int `json:"zoom,omitempty" example:"14"`
-	// Search radius in kilometers
+	// 搜索半径（公里）
 	Radius float64 `json:"radius,omitempty" example:"5.0"`
-	// Use fast mode (stealth HTTP instead of browser)
+	// 使用快速模式（使用隐身 HTTP 请求代替浏览器）
 	FastMode bool `json:"fast_mode,omitempty" example:"false"`
-	// Extract additional reviews
+	// 提取更多评论
 	ExtraReviews bool `json:"extra_reviews,omitempty" example:"false"`
-	// Job timeout in seconds (1-300, default: 300)
+	// 任务超时时间，单位秒（1-300，默认：300）
 	Timeout int `json:"timeout,omitempty" example:"300"`
 }
 
@@ -125,83 +125,83 @@ func (r *ScrapeRequest) SetDefaults() {
 }
 
 // ScrapeResponse represents the response after submitting a scrape job
-// @Description Response returned after successfully submitting a scrape job
+// @Description 成功提交抓取任务后返回的响应
 type ScrapeResponse struct {
-	// Unique job identifier
+	// 唯一任务标识符
 	JobID string `json:"job_id" example:"kYzR8xLmNpQvWjX3"`
-	// Current job status
+	// 当前任务状态
 	Status string `json:"status" example:"pending"`
 }
 
 // ListJobsRequest represents parameters for listing jobs
-// @Description Query parameters for listing jobs with pagination and filtering
+// @Description 用于分页和过滤任务列表的查询参数
 type ListJobsRequest struct {
-	// Filter by job state (available, running, completed, cancelled, discarded, pending, retryable, scheduled)
+	// 按任务状态过滤 (available, running, completed, cancelled, discarded, pending, retryable, scheduled)
 	State string `json:"state,omitempty" example:"completed"`
-	// Number of jobs to return (default: 20, max: 100)
+	// 返回的任务数量（默认：20，最大：100）
 	Limit int `json:"limit,omitempty" example:"20"`
-	// Cursor for pagination (from previous response)
+	// 用于分页的游标（来自上一次请求的响应）
 	Cursor string `json:"cursor,omitempty" example:""`
 }
 
 // JobSummary represents a job without result data
-// @Description Summary of a job without the full result data
+// @Description 不包含完整结果数据的任务摘要
 type JobSummary struct {
-	// Unique job identifier (encoded)
+	// 唯一任务标识符
 	JobID string `json:"job_id" example:"kYzR8xLmNpQvWjX3"`
-	// Current job status
+	// 当前任务状态
 	Status string `json:"status" example:"completed"`
-	// Search keyword used for this job
+	// 用于此任务的搜索关键词
 	Keyword string `json:"keyword" example:"restaurants in New York"`
-	// When the job was created
+	// 任务创建时间
 	CreatedAt time.Time `json:"created_at" example:"2024-01-15T10:30:00Z"`
-	// When the job started processing
+	// 任务开始处理的时间
 	StartedAt *time.Time `json:"started_at,omitempty" example:"2024-01-15T10:30:05Z"`
-	// When the job completed
+	// 任务完成时间
 	CompletedAt *time.Time `json:"completed_at,omitempty" example:"2024-01-15T10:35:00Z"`
-	// Number of results found
+	// 找到的结果数量
 	ResultCount int `json:"result_count" example:"25"`
-	// Error message if job failed
+	// 任务失败时的错误信息
 	Error string `json:"error,omitempty" example:""`
 }
 
 // ListJobsResponse represents a paginated list of jobs
-// @Description Paginated list of jobs with cursor for next page
+// @Description 带有下一页游标的分页任务列表
 type ListJobsResponse struct {
-	// List of jobs
+	// 任务列表
 	Jobs []JobSummary `json:"jobs"`
-	// Cursor for next page (empty if no more results)
+	// 下一页的游标（如果没有更多结果则为空）
 	NextCursor string `json:"next_cursor,omitempty" example:"eyJpZCI6MTIzfQ=="`
-	// Whether there are more results
+	// 是否有更多结果
 	HasMore bool `json:"has_more" example:"true"`
 }
 
 // JobStatusResponse represents the status of a scrape job
-// @Description Detailed status of a scrape job including results when completed
+// @Description 抓取任务的详细状态（完成后将包含结果）
 type JobStatusResponse struct {
-	// Unique job identifier
+	// 唯一任务标识符
 	JobID string `json:"job_id" example:"kYzR8xLmNpQvWjX3"`
-	// Current job status (pending, running, completed, failed)
+	// 当前任务状态 (pending, running, completed, failed)
 	Status string `json:"status" example:"completed"`
-	// Search keyword used for this job
+	// 用于此任务的搜索关键词
 	Keyword string `json:"keyword" example:"restaurants in New York"`
-	// When the job was created
+	// 任务创建时间
 	CreatedAt time.Time `json:"created_at" example:"2024-01-15T10:30:00Z"`
-	// When the job started processing
+	// 任务开始处理的时间
 	StartedAt *time.Time `json:"started_at,omitempty" example:"2024-01-15T10:30:05Z"`
-	// When the job completed
+	// 任务完成时间
 	CompletedAt *time.Time `json:"completed_at,omitempty" example:"2024-01-15T10:35:00Z"`
-	// Scrape results (array of place data)
+	// 抓取结果（地点数据数组）
 	Results GmapData `json:"results,omitempty"`
-	// Error message if job failed
+	// 任务失败时的错误信息
 	Error string `json:"error,omitempty" example:""`
-	// Number of results found
+	// 找到的结果数量
 	ResultCount int `json:"result_count" example:"25"`
 }
 
 // DeleteJobResponse represents the response after requesting job deletion
-// @Description Response returned after successfully queueing a job for deletion
+// @Description 成功将任务加入删除队列后返回的响应
 type DeleteJobResponse struct {
-	// Status message
+	// 状态信息
 	Message string `json:"message" example:"deletion queued"`
 }

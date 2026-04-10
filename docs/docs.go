@@ -34,7 +34,7 @@ const docTemplate = `{
                 "summary": "健康检查",
                 "responses": {
                     "200": {
-                        "description": "成功",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.HealthCheckResponse"
                         }
@@ -74,19 +74,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.ListJobsResponse"
                         }
                     },
                     "400": {
-                        "description": "请求无效",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "服务器内部错误",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorResponse"
                         }
@@ -115,19 +115,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/api.JobStatusResponse"
                         }
                     },
                     "400": {
-                        "description": "请求无效",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "未找到指定任务",
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorResponse"
                         }
@@ -151,7 +151,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "202": {
-                        "description": "已接受删除请求",
+                        "description": "Accepted",
                         "schema": {
                             "$ref": "#/definitions/api.DeleteJobResponse"
                         }
@@ -203,19 +203,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "202": {
-                        "description": "已接受抓取请求",
+                        "description": "Accepted",
                         "schema": {
                             "$ref": "#/definitions/api.ScrapeResponse"
                         }
                     },
                     "400": {
-                        "description": "请求无效",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "服务器内部错误",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/api.ErrorResponse"
                         }
@@ -241,7 +241,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "message": {
-                    "description": "错误详情",
                     "type": "string",
                     "example": "invalid request body"
                 }
@@ -252,7 +251,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "status": {
-                    "description": "服务状态",
                     "type": "string",
                     "example": "ok"
                 }

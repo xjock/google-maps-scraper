@@ -52,8 +52,8 @@ func Routes(r chi.Router, appState *AppState) {
 }
 
 // healthCheckHandler godoc
-// @Summary Health check
-// @Description Check if the API service is healthy
+// @Summary 健康检查
+// @Description 检查 API 服务是否健康
 // @Tags health
 // @Produce json
 // @Success 200 {object} HealthCheckResponse
@@ -67,12 +67,12 @@ func healthCheckHandler(_ *AppState) http.HandlerFunc {
 }
 
 // scrapeHandler godoc
-// @Summary Submit a scrape job
-// @Description Submit a new Google Maps scrape job for processing
+// @Summary 提交抓取任务
+// @Description 提交一个新的 Google Maps 抓取任务进行处理
 // @Tags scrape
 // @Accept json
 // @Produce json
-// @Param request body ScrapeRequest true "Scrape request parameters"
+// @Param request body ScrapeRequest true "抓取请求参数"
 // @Success 202 {object} ScrapeResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -132,13 +132,13 @@ func scrapeHandler(appState *AppState) http.HandlerFunc {
 }
 
 // listJobsHandler godoc
-// @Summary List jobs
-// @Description List all scrape jobs with pagination and optional state filtering
+// @Summary 获取任务列表
+// @Description 分页列出所有抓取任务，支持按状态过滤
 // @Tags scrape
 // @Produce json
-// @Param state query string false "Filter by state (available, running, completed, cancelled, discarded, pending, retryable, scheduled)"
-// @Param limit query int false "Number of jobs to return (default: 20, max: 100)"
-// @Param cursor query string false "Cursor for pagination"
+// @Param state query string false "按状态过滤 (available, running, completed, cancelled, discarded, pending, retryable, scheduled)"
+// @Param limit query int false "返回的任务数量（默认：20，最大：100）"
+// @Param cursor query string false "用于分页的游标"
 // @Success 200 {object} ListJobsResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -192,11 +192,11 @@ func listJobsHandler(appState *AppState) http.HandlerFunc {
 }
 
 // getJobHandler godoc
-// @Summary Get job status
-// @Description Get the status and results of a scrape job
+// @Summary 获取任务状态
+// @Description 获取抓取任务的状态和结果
 // @Tags scrape
 // @Produce json
-// @Param job_id path string true "Job ID"
+// @Param job_id path string true "任务 ID"
 // @Success 200 {object} JobStatusResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -244,14 +244,14 @@ func getJobHandler(appState *AppState) http.HandlerFunc {
 }
 
 // deleteJobHandler godoc
-// @Summary Delete a job
-// @Description Queues deletion of a job and its results. Running jobs are cancelled first.
+// @Summary 删除任务
+// @Description 将任务及其结果放入删除队列。运行中的任务会被优先取消。
 // @Tags scrape
-// @Param job_id path string true "Job ID"
+// @Param job_id path string true "任务 ID"
 // @Success 202 {object} DeleteJobResponse
-// @Failure 400 {object} ErrorResponse "Invalid job ID"
-// @Failure 404 {object} ErrorResponse "Job not found"
-// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Failure 400 {object} ErrorResponse "无效的任务 ID"
+// @Failure 404 {object} ErrorResponse "未找到指定任务"
+// @Failure 500 {object} ErrorResponse "服务器内部错误"
 // @Router /api/v1/jobs/{job_id} [delete]
 func deleteJobHandler(appState *AppState) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
