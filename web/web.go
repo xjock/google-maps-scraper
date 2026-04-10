@@ -627,12 +627,12 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'self'; "+
-				"script-src 'self' cdn.redoc.ly cdnjs.cloudflare.com maps.googleapis.com 'unsafe-inline' 'unsafe-eval'; "+
+				"script-src 'self' cdn.redoc.ly cdnjs.cloudflare.com unpkg.com 'unsafe-inline' 'unsafe-eval'; "+
 				"worker-src 'self' blob:; "+
-				"style-src 'self' 'unsafe-inline' fonts.googleapis.com; "+
-				"img-src 'self' data: cdn.redoc.ly maps.googleapis.com maps.gstatic.com *.googleapis.com *.gstatic.com; "+
+				"style-src 'self' 'unsafe-inline' fonts.googleapis.com unpkg.com cdnjs.cloudflare.com; "+
+				"img-src 'self' data: cdn.redoc.ly unpkg.com cdnjs.cloudflare.com *.tile.openstreetmap.org; "+
 				"font-src 'self' fonts.gstatic.com; "+
-				"connect-src 'self' maps.googleapis.com")
+				"connect-src 'self'")
 
 		next.ServeHTTP(w, r)
 	})

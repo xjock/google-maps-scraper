@@ -6,26 +6,31 @@
     <title>Google Maps Scraper</title>
     <link rel="stylesheet" href="/static/css/main.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.6/htmx.min.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+
     <style>
         /* 针对新布局的微调样式 */
         .content {
             display: flex;
             flex-direction: column;
-            gap: 24px; /* 地图和表格之间的间距 */
+            gap: 24px; 
             padding: 24px 32px;
-            background-color: #f8f9fa; /* 稍微深一点的背景色衬托卡片 */
+            background-color: #f8f9fa; 
         }
         
         .map-section {
-            /* 删除了 flex: 0 0 500px; 和 display: flex; */
-            height: 800px; /* 强制绝对高度 */
-            min-height: 800px; 
+            height: 500px;
+            min-height: 500px; 
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             overflow: hidden;
             border: 1px solid var(--color-border);
-            position: relative; /* 关键：给地图提供绝对定位参考 */
+            position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
         .map-header {
@@ -37,6 +42,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            z-index: 1000; /* 确保 header 在地图之上 */
         }
 
         .map-header span.tip {
@@ -51,7 +57,7 @@
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             border: 1px solid var(--color-border);
-            flex: 1; /* 占据剩下的空间 */
+            flex: 1; 
         }
 
         .table-section h2 {
@@ -61,7 +67,6 @@
             color: var(--color-text);
         }
         
-        /* 侧边栏按钮样式优化 */
         .btn-submit {
             margin-top: 15px; 
             width: 100%; 
@@ -69,12 +74,19 @@
             font-size: 1.1em;
             cursor: pointer;
         }
+
+        /* 修复 Leaflet 在 Flex 布局下的层级和小问题 */
+        #map {
+            flex: 1;
+            width: 100%;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
     <div class="app-container">
         <header>
-            <h1>地图POI拾取</h1>
+            <h1>地图POI拾取 (OSM版)</h1>
         </header>
         <main>
             <div class="sidebar">
@@ -154,10 +166,6 @@
                         <fieldset>
                             <div class="form-group">
                                 <label for="proxies">Proxies:(one per line)</label>
-                                <p class="text-muted"><small>Examples:<br>
-                                        <p>HTTPS: https://user:pass@proxy:443</p>
-                                        <p>SOCKS5: socks5://127.0.0.1:8000</p>
-                                </small></p>
                                 <textarea id="proxies" name="proxies" rows="3">{{.ProxiesString}}</textarea>
                             </div>
                         </fieldset>
@@ -168,9 +176,8 @@
             </div>
 
             <div class="content">
-                
                 <div class="map-section">
-                    <div id="map" style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%;"></div>
+                    <div id="map"></div>
                 </div>
 
                 <div class="table-section">
@@ -187,131 +194,118 @@
                             </tr>
                         </thead>
                         <tbody hx-get="/jobs" hx-trigger="load, every 10s">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
-
             </div>
         </main>
     </div>
 
-<script>
-function hideSponsor() {
-    const sponsorSection = document.getElementById('sponsor-section');
-    if (sponsorSection) {
-        sponsorSection.style.display = 'none';
-    }
-}
-</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxzhMohIbpyThAbgtP1ZS3LC2qYmVCKf8&libraries=drawing,geometry&callback=initMap" async defer></script>
 <script>
 let map;
-let drawingManager;
-let currentOverlay = null;
+let drawnItems;
+let currentLayer = null;
 
-function initMap() {
-    // 1. Initialize map
-    const initialLat = parseFloat(document.getElementById('latitude').value) || 39.9042; // Default to Beijing if empty
-    const initialLon = parseFloat(document.getElementById('longitude').value) || 116.4074;
+document.addEventListener('DOMContentLoaded', function() {
+    const latInput = document.getElementById('latitude');
+    const lonInput = document.getElementById('longitude');
+    
+    const initialLat = parseFloat(latInput.value) || 39.9042; 
+    const initialLon = parseFloat(lonInput.value) || 116.4074;
     const initialZoom = parseInt(document.getElementById('zoom').value) || 10;
 
-    map = new google.maps.Map(document.getElementById('map'), {
-        center: {lat: initialLat, lng: initialLon},
-        zoom: initialZoom,
-        mapTypeControl: true, // 开启卫星图切换控件
-        mapTypeControlOptions: {
-            position: google.maps.ControlPosition.TOP_RIGHT
+    // 1. 初始化 Leaflet 地图
+    map = L.map('map').setView([initialLat, initialLon], initialZoom);
+
+    // 2. 加载完全免费的 OpenStreetMap 瓦片
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    // 3. 初始化绘图图层组
+    drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    // 4. 配置绘图控制面板
+    const drawControl = new L.Control.Draw({
+        draw: {
+            polyline: false, // 禁用画线
+            marker: false,   // 禁用标记点
+            circlemarker: false,
+            polygon: {
+                allowIntersection: false,
+                drawError: { color: '#e1e100', message: '<strong>Oh snap!<strong> you can\'t draw that!' },
+                shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.2 }
+            },
+            rectangle: { shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.2 } },
+            circle: { shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.2 } }
         },
-        streetViewControl: false, // 关闭街景控件
-        // 👇 新增这一行：开启贪婪模式，拦截所有鼠标滚轮和触摸手势
-        gestureHandling: 'greedy'
-        
-    });
-
-    // 2. Initialize Drawing Manager
-    drawingManager = new google.maps.drawing.DrawingManager({
-        drawingMode: null, 
-        drawingControl: true,
-        drawingControlOptions: {
-            position: google.maps.ControlPosition.TOP_CENTER,
-            drawingModes: [
-                google.maps.drawing.OverlayType.CIRCLE,
-                google.maps.drawing.OverlayType.RECTANGLE,
-                google.maps.drawing.OverlayType.POLYGON
-            ],
-        },
-        circleOptions: { fillColor: '#0084ff', fillOpacity: 0.2, strokeWeight: 2, editable: true },
-        rectangleOptions: { fillColor: '#0084ff', fillOpacity: 0.2, strokeWeight: 2, editable: true },
-        polygonOptions: { fillColor: '#0084ff', fillOpacity: 0.2, strokeWeight: 2, editable: true }
-    });
-
-    drawingManager.setMap(map);
-
-    // 3. Listen for drawing completion
-    google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-        if (currentOverlay) {
-            currentOverlay.setMap(null);
+        edit: {
+            featureGroup: drawnItems,
+            remove: true
         }
-        currentOverlay = event.overlay;
-        drawingManager.setDrawingMode(null); // Switch back to hand pointer
+    });
+    map.addControl(drawControl);
 
-        let centerLat, centerLng, radius;
+    // 5. 监听绘制完成事件
+    map.on(L.Draw.Event.CREATED, function (event) {
+        const layer = event.layer;
+        const type = event.layerType;
 
-        if (event.type === 'circle') {
-            const center = event.overlay.getCenter();
-            centerLat = center.lat();
-            centerLng = center.lng();
-            radius = event.overlay.getRadius();
+        drawnItems.clearLayers(); // 清除上一个图形，保持单选
+        drawnItems.addLayer(layer);
+        currentLayer = layer;
 
-            google.maps.event.addListener(currentOverlay, 'radius_changed', updateFormFromCircle);
-            google.maps.event.addListener(currentOverlay, 'center_changed', updateFormFromCircle);
+        updateFromLayer(layer, type);
+    });
 
-        } else if (event.type === 'rectangle') {
-            const bounds = event.overlay.getBounds();
-            const center = bounds.getCenter();
-            const corner = bounds.getNorthEast();
-            centerLat = center.lat();
-            centerLng = center.lng();
-            radius = google.maps.geometry.spherical.computeDistanceBetween(center, corner);
-
-        } else if (event.type === 'polygon') {
-            const path = event.overlay.getPath();
-            let latSum = 0, lngSum = 0;
+    // 6. 监听图形被编辑（拖拽边缘改变大小）事件
+    map.on(L.Draw.Event.EDITED, function (event) {
+        const layers = event.layers;
+        layers.eachLayer(function (layer) {
+            let type = 'polygon';
+            if (layer instanceof L.Circle) type = 'circle';
+            else if (layer instanceof L.Rectangle) type = 'rectangle';
             
-            path.forEach(function(latLng) {
-                latSum += latLng.lat();
-                lngSum += latLng.lng();
-            });
-            centerLat = latSum / path.getLength();
-            centerLng = lngSum / path.getLength();
-            const center = new google.maps.LatLng(centerLat, centerLng);
-
-            radius = 0;
-            path.forEach(function(latLng) {
-                const dist = google.maps.geometry.spherical.computeDistanceBetween(center, latLng);
-                if (dist > radius) radius = dist;
-            });
-        }
-
-        updateFormInputs(centerLat, centerLng, radius, map.getZoom());
+            updateFromLayer(layer, type);
+        });
     });
-    
-    // Listen for manual zoom changes
-    map.addListener('zoom_changed', function() {
+
+    // 7. 监听地图缩放
+    map.on('zoomend', function() {
         document.getElementById('zoom').value = map.getZoom();
     });
-}
+});
 
-function updateFormFromCircle() {
-    if (currentOverlay) {
-        updateFormInputs(
-            currentOverlay.getCenter().lat(),
-            currentOverlay.getCenter().lng(),
-            currentOverlay.getRadius(),
-            map.getZoom()
-        );
+// 计算中心点和降维半径
+function updateFromLayer(layer, type) {
+    let centerLat, centerLng, radius = 0;
+
+    if (type === 'circle') {
+        const center = layer.getLatLng();
+        centerLat = center.lat;
+        centerLng = center.lng;
+        radius = layer.getRadius();
+    } else {
+        // 多边形或矩形处理逻辑：寻找几何中心，并寻找距离最远的顶点作为外接圆半径
+        const bounds = layer.getBounds();
+        const center = bounds.getCenter();
+        centerLat = center.lat;
+        centerLng = center.lng;
+
+        // Leaflet.draw 产生的是嵌套数组，取第一个闭环
+        const latlngs = layer.getLatLngs()[0];
+        latlngs.forEach(ll => {
+            const dist = map.distance(center, ll); // 计算地球表面两点距离（米）
+            if (dist > radius) radius = dist;
+        });
     }
+
+    updateFormInputs(centerLat, centerLng, radius, map.getZoom());
 }
 
 function updateFormInputs(lat, lng, radius, zoom) {
