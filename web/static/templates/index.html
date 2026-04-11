@@ -1,423 +1,795 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Maps 智能爬虫系统</title>
-    <link rel="stylesheet" href="/static/css/main.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.6/htmx.min.js"></script>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Google Maps 智能爬虫系统</title>
+        <link rel="stylesheet" href="/static/css/main.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.6/htmx.min.js"></script>
 
-    <style>
-        /* 针对新布局的微调样式 */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-        }
-        .content {
-            display: flex;
-            flex-direction: column;
-            gap: 24px; 
-            padding: 24px 32px;
-            background-color: #f8f9fa; 
-        }
-        
-        .map-section {
-            height: 500px;
-            min-height: 500px; 
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            overflow: hidden;
-            border: 1px solid var(--color-border);
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
+        />
 
-        .map-header {
-            padding: 12px 20px;
-            background-color: white;
-            border-bottom: 1px solid var(--color-border);
-            font-weight: 600;
-            color: var(--color-text);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 1000;
-        }
+        <style>
+            /* 针对新布局的微调样式 */
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+                    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+                    "Noto Color Emoji";
+            }
+            .content {
+                display: flex;
+                flex-direction: column;
+                gap: 24px;
+                padding: 24px 32px;
+                background-color: #f8f9fa;
+            }
 
-        .map-header span.tip {
-            font-size: 0.85em;
-            color: #666;
-            font-weight: normal;
-        }
+            .map-section {
+                height: 500px;
+                min-height: 500px;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+                overflow: hidden;
+                border: 1px solid var(--color-border);
+                position: relative;
+                display: flex;
+                flex-direction: column;
+            }
 
-        .table-section {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            border: 1px solid var(--color-border);
-            flex: 1; 
-        }
+            .map-header {
+                padding: 12px 20px;
+                background-color: white;
+                border-bottom: 1px solid var(--color-border);
+                font-weight: 600;
+                color: var(--color-text);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                z-index: 1000;
+            }
 
-        .table-section h2 {
-            margin-top: 0;
-            margin-bottom: 16px;
-            font-size: 1.25rem;
-            color: var(--color-text);
-            border-left: 4px solid #0084ff;
-            padding-left: 10px;
-        }
-        
-        .btn-submit {
-            margin-top: 15px; 
-            width: 100%; 
-            padding: 12px; 
-            font-size: 1.1em;
-            cursor: pointer;
-            background-color: #0084ff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-            transition: background-color 0.2s;
-        }
-        .btn-submit:hover {
-            background-color: #006bce;
-        }
+            .map-header span.tip {
+                font-size: 0.85em;
+                color: #666;
+                font-weight: normal;
+            }
 
-        #map {
-            flex: 1;
-            width: 100%;
-            z-index: 1;
-        }
-        
-        /* 汉化 Leaflet Draw 的默认提示框文字 */
-        .leaflet-draw-tooltip {
-            font-family: inherit;
-        }
-    </style>
-</head>
-<body>
-    <div class="app-container">
-        <header>
-            <h1>🌍 跨境地图数据拾取系统</h1>
-            <nav>
-                <a href="/api/docs" target="_blank" rel="noopener noreferrer" style="color: #666; text-decoration: none; font-weight: 500;">API 文档</a>
-            </nav>
-        </header>        
+            .table-section {
+                background: white;
+                border-radius: 8px;
+                padding: 20px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+                border: 1px solid var(--color-border);
+                flex: 1;
+            }
 
-        <main>
-            <div class="sidebar">
-                <div id="error-container" class="error-message"></div>
-                <form 
-                    hx-post="/scrape" 
-                    hx-target="#job-table tbody" 
-                    hx-swap="beforeend"
-                    hx-indicator="#spinner"
-                    hx-on::before-request="document.getElementById('error-container').innerHTML = ''"
-                    hx-on::after-request="if(!event.detail.successful) document.getElementById('error-container').innerHTML = event.detail.xhr.responseText"
-                >
-                    
-                    <fieldset>
-                        <legend>📌 基础任务设置</legend>
-                        <div class="form-group">
-                            <label for="name">任务名称 (必填):</label>
-                            <input type="text" id="name" name="name" value="{{.Name}}" placeholder="如：洛杉矶咖啡店采集">
-                        </div>
-                        <div class="form-group">
-                            <label for="keywords">搜索关键词 (每行一个):</label>
-                            <textarea id="keywords" name="keywords" rows="5" placeholder="coffee shop&#10;cafe&#10;starbucks">{{ .KeywordsString }}</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="lang">结果语言 (如 zh-CN, en):</label>
-                            <input type="text" id="lang" name="lang" value="zh-CN" placeholder="推荐使用 zh-CN 获取最准数据">
-                        </div>
-                    </fieldset>
-                    
-                    <details class="expandable-section" open>
-                        <summary>📍 地理坐标同步区</summary>
+            .table-section h2 {
+                margin-top: 0;
+                margin-bottom: 16px;
+                font-size: 1.25rem;
+                color: var(--color-text);
+                border-left: 4px solid #0084ff;
+                padding-left: 10px;
+            }
+
+            .btn-submit {
+                margin-top: 15px;
+                width: 100%;
+                padding: 12px;
+                font-size: 1.1em;
+                cursor: pointer;
+                background-color: #0084ff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+                transition: background-color 0.2s;
+            }
+            .btn-submit:hover {
+                background-color: #006bce;
+            }
+
+            #map {
+                flex: 1;
+                width: 100%;
+                z-index: 1;
+            }
+
+            /* 汉化 Leaflet Draw 的默认提示框文字 */
+            .leaflet-draw-tooltip {
+                font-family: inherit;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="app-container">
+            <header>
+                <h1>🌍 跨境地图数据拾取系统</h1>
+                <nav>
+                    <a
+                        href="/api/docs"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style="
+                            color: #666;
+                            text-decoration: none;
+                            font-weight: 500;
+                        "
+                        >API 文档</a
+                    >
+                </nav>
+            </header>
+
+            <main>
+                <div class="sidebar">
+                    <div id="error-container" class="error-message"></div>
+                    <form
+                        hx-post="/scrape"
+                        hx-target="#job-table tbody"
+                        hx-swap="beforeend"
+                        hx-indicator="#spinner"
+                        hx-on::before-request="document.getElementById('error-container').innerHTML = ''"
+                        hx-on::after-request="if(!event.detail.successful) document.getElementById('error-container').innerHTML = event.detail.xhr.responseText"
+                    >
                         <fieldset>
-                            <p style="font-size: 0.85em; color: #666; margin-top: 0; line-height: 1.4;">请在右侧地图上画出要采集的区域，系统会自动计算中心坐标和边界数据。</p>
+                            <legend>📌 基础任务设置</legend>
                             <div class="form-group">
-                                <label for="zoom">地图层级 (Zoom):</label>
-                                <select id="zoom" name="zoom" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; font-size: 14px;">
-                                    <option value="12">12 (城市/区级)</option>
-                                    <option value="13">13</option>
-                                    <option value="14" selected>14 (街道级)</option>
-                                    <option value="15">15</option>
-                                    <option value="16">16 (社区级)</option>
-                                    <option value="17">17</option>
-                                    <option value="18">18 (建筑/精细级)</option>
-                                </select>
+                                <label for="name">任务名称 (必填):</label>
+                                <input
+                                    type="text"
+                                    id="name"
+                                    name="name"
+                                    value="{{.Name}}"
+                                    placeholder="如：洛杉矶咖啡店采集"
+                                />
                             </div>
                             <div class="form-group">
-                                <label for="latitude">中心纬度 (Lat):</label>
-                                <input type="number" step="0.000000000000001" id="latitude" name="latitude" value="{{.Lat}}" readonly style="background-color: #f0f2f5; color: #666; cursor: not-allowed;">
+                                <label for="keywords"
+                                    >搜索关键词 (每行一个):</label
+                                >
+                                <textarea
+                                    id="keywords"
+                                    name="keywords"
+                                    rows="5"
+                                    placeholder="coffee shop&#10;cafe&#10;starbucks"
+                                >
+{{ .KeywordsString }}</textarea
+                                >
                             </div>
                             <div class="form-group">
-                                <label for="longitude">中心经度 (Lon):</label>
-                                <input type="number" step="0.000000000000001" id="longitude" name="longitude" value="{{.Lon}}" readonly style="background-color: #f0f2f5; color: #666; cursor: not-allowed;">
+                                <label for="lang"
+                                    >结果语言 (如 zh-CN, en):</label
+                                >
+                                <input
+                                    type="text"
+                                    id="lang"
+                                    name="lang"
+                                    value="zh-CN"
+                                    placeholder="推荐使用 zh-CN 获取最准数据"
+                                />
                             </div>
-                            <div class="form-group">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
-                                    <label for="geojson" style="margin-bottom: 0;">绘制图形 (GeoJSON):</label>
-                                    <button type="button" id="copy-geojson-btn" onclick="copyGeoJSON()" style="padding: 3px 8px; font-size: 0.85em; cursor: pointer; background-color: #f0f2f5; border: 1px solid #ccc; border-radius: 4px; color: #333; transition: all 0.2s;">📋 复制</button>
+                        </fieldset>
+
+                        <details class="expandable-section" open>
+                            <summary>📍 地理坐标同步区</summary>
+                            <fieldset>
+                                <p
+                                    style="
+                                        font-size: 0.85em;
+                                        color: #666;
+                                        margin-top: 0;
+                                        line-height: 1.4;
+                                    "
+                                >
+                                    请在右侧地图上画出要采集的区域，系统会自动计算中心坐标和边界数据。
+                                </p>
+                                <div class="form-group">
+                                    <label for="zoom">地图层级 (Zoom):</label>
+                                    <select
+                                        id="zoom"
+                                        name="zoom"
+                                        style="
+                                            padding: 8px;
+                                            border: 1px solid #ccc;
+                                            border-radius: 4px;
+                                            width: 100%;
+                                            font-size: 14px;
+                                        "
+                                    >
+                                        <option value="12">
+                                            12 (城市/区级)
+                                        </option>
+                                        <option value="13">13</option>
+                                        <option value="14" selected>
+                                            14 (街道级)
+                                        </option>
+                                        <option value="15">15</option>
+                                        <option value="16">16 (社区级)</option>
+                                        <option value="17">17</option>
+                                        <option value="18">
+                                            18 (建筑/精细级)
+                                        </option>
+                                    </select>
                                 </div>
-                                <textarea id="geojson" name="geojson" rows="5" readonly style="background-color: #e8f0fe; color: #0084ff; font-family: monospace; font-size: 12px; cursor: not-allowed; resize: vertical; margin-top:0;"></textarea>
-                            </div>
-                            <input type="hidden" id="radius" name="radius" value="{{.Radius}}">
-                        </fieldset>
-                    </details>
-                    
-                    <details class="expandable-section">
-                        <summary>⚙️ 深度抓取选项</summary>
-                        <fieldset>
-                            <div class="form-group">
-                                <label for="fastmode">急速模式 (Fast Mode):</label>
-                                <input type="checkbox" id="fastmode" name="fastmode" {{if .FastMode}}checked{{end}}>
-                                <small style="display:block; color:#888; margin-top:4px;">勾选后不再进入商家详情页，仅抓取列表概览数据。</small>
-                            </div>
-                            <div class="form-group" style="margin-top: 15px;">
-                                <label for="depth">下拉翻页深度 (Depth):</label>
-                                <input type="number" step="1" id="depth" name="depth" value="{{if .Depth}}{{.Depth}}{{else}}10{{end}}">
-                            </div>
-                            <div class="form-group checkbox" style="margin-top: 15px;">
-                                <input type="checkbox" id="email" name="email" {{if .Email}}checked{{end}}>
-                                <label for="email" style="display:inline; font-weight:bold;">深度爬取商家官网邮箱</label>
-                            </div>
-                            <div class="form-group" style="margin-top: 15px;">
-                                <label for="maxtime">任务超时阈值:</label>
-                                <input type="text" id="maxtime" name="maxtime" value="{{if .MaxTime}}{{.MaxTime}}{{else}}30m{{end}}" placeholder="如 10m, 1h">
-                            </div>
-                        </fieldset>
-                    </details>
-                    
-                    <details class="expandable-section">
-                        <summary>🌐 代理 IP 配置</summary>
-                        <fieldset>
-                            <div class="form-group">
-                                <label for="proxies">代理池 (每行一个):</label>
-                                <p class="text-muted" style="line-height: 1.4;"><small>支持格式示例:<br>
-                                        HTTP/HTTPS: <code>http://user:pass@127.0.0.1:8080</code><br>
-                                        SOCKS5: <code>socks5://127.0.0.1:1080</code>
-                                </small></p>
-                                <textarea id="proxies" name="proxies" rows="4" placeholder="留空则使用本机当前网络">{{.ProxiesString}}</textarea>
-                            </div>
-                        </fieldset>
-                    </details>
-                    
-                    <button type="submit" class="btn-submit">🚀 开始执行抓取任务</button>
-                </form>
-            </div>
+                                <div class="form-group">
+                                    <label for="latitude"
+                                        >中心纬度 (Lat):</label
+                                    >
+                                    <input
+                                        type="number"
+                                        step="0.000000000000001"
+                                        id="latitude"
+                                        name="latitude"
+                                        value="{{.Lat}}"
+                                        readonly
+                                        style="
+                                            background-color: #f0f2f5;
+                                            color: #666;
+                                            cursor: not-allowed;
+                                        "
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label for="longitude"
+                                        >中心经度 (Lon):</label
+                                    >
+                                    <input
+                                        type="number"
+                                        step="0.000000000000001"
+                                        id="longitude"
+                                        name="longitude"
+                                        value="{{.Lon}}"
+                                        readonly
+                                        style="
+                                            background-color: #f0f2f5;
+                                            color: #666;
+                                            cursor: not-allowed;
+                                        "
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <div
+                                        style="
+                                            display: flex;
+                                            justify-content: space-between;
+                                            align-items: flex-end;
+                                            margin-bottom: 4px;
+                                        "
+                                    >
+                                        <label
+                                            for="geojson"
+                                            style="margin-bottom: 0"
+                                            >绘制图形 (GeoJSON):
+                                            <span
+                                                id="geojson-error"
+                                                style="
+                                                    color: #d93025;
+                                                    font-size: 0.85em;
+                                                    font-weight: normal;
+                                                    margin-left: 8px;
+                                                    display: none;
+                                                "
+                                            ></span
+                                        ></label>
+                                        <button
+                                            type="button"
+                                            id="copy-geojson-btn"
+                                            onclick="copyGeoJSON()"
+                                            style="
+                                                padding: 3px 8px;
+                                                font-size: 0.85em;
+                                                cursor: pointer;
+                                                background-color: #f0f2f5;
+                                                border: 1px solid #ccc;
+                                                border-radius: 4px;
+                                                color: #333;
+                                                transition: all 0.2s;
+                                            "
+                                        >
+                                            📋 复制
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        id="geojson"
+                                        name="geojson"
+                                        rows="5"
+                                        style="
+                                            color: #0084ff;
+                                            font-family: monospace;
+                                            font-size: 12px;
+                                            resize: vertical;
+                                            margin-top: 0;
+                                        "
+                                        oninput="
+                                            updateMapFromGeoJSON(this.value)
+                                        "
+                                    ></textarea>
+                                </div>
+                                <input
+                                    type="hidden"
+                                    id="radius"
+                                    name="radius"
+                                    value="{{.Radius}}"
+                                />
+                            </fieldset>
+                        </details>
 
-            <div class="content">
-                
-                <div class="map-section">
-                    <div id="map"></div>
+                        <details class="expandable-section">
+                            <summary>⚙️ 深度抓取选项</summary>
+                            <fieldset>
+                                <div class="form-group">
+                                    <label for="fastmode"
+                                        >急速模式 (Fast Mode):</label
+                                    >
+                                    <input
+                                        type="checkbox"
+                                        id="fastmode"
+                                        name="fastmode"
+                                        {{if
+                                        .FastMode}}checked{{end}}
+                                    />
+                                    <small
+                                        style="
+                                            display: block;
+                                            color: #888;
+                                            margin-top: 4px;
+                                        "
+                                        >勾选后不再进入商家详情页，仅抓取列表概览数据。</small
+                                    >
+                                </div>
+                                <div
+                                    class="form-group"
+                                    style="margin-top: 15px"
+                                >
+                                    <label for="depth"
+                                        >下拉翻页深度 (Depth):</label
+                                    >
+                                    <input
+                                        type="number"
+                                        step="1"
+                                        id="depth"
+                                        name="depth"
+                                        value="{{if .Depth}}{{.Depth}}{{else}}10{{end}}"
+                                    />
+                                </div>
+                                <div
+                                    class="form-group checkbox"
+                                    style="margin-top: 15px"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        id="email"
+                                        name="email"
+                                        {{if
+                                        .Email}}checked{{end}}
+                                    />
+                                    <label
+                                        for="email"
+                                        style="
+                                            display: inline;
+                                            font-weight: bold;
+                                        "
+                                        >深度爬取商家官网邮箱</label
+                                    >
+                                </div>
+                                <div
+                                    class="form-group"
+                                    style="margin-top: 15px"
+                                >
+                                    <label for="maxtime">任务超时阈值:</label>
+                                    <input
+                                        type="text"
+                                        id="maxtime"
+                                        name="maxtime"
+                                        value="{{if .MaxTime}}{{.MaxTime}}{{else}}30m{{end}}"
+                                        placeholder="如 10m, 1h"
+                                    />
+                                </div>
+                            </fieldset>
+                        </details>
+
+                        <details class="expandable-section">
+                            <summary>🌐 代理 IP 配置</summary>
+                            <fieldset>
+                                <div class="form-group">
+                                    <label for="proxies"
+                                        >代理池 (每行一个):</label
+                                    >
+                                    <p
+                                        class="text-muted"
+                                        style="line-height: 1.4"
+                                    >
+                                        <small
+                                            >支持格式示例:<br />
+                                            HTTP/HTTPS:
+                                            <code
+                                                >http://user:pass@127.0.0.1:8080</code
+                                            ><br />
+                                            SOCKS5:
+                                            <code>socks5://127.0.0.1:1080</code>
+                                        </small>
+                                    </p>
+                                    <textarea
+                                        id="proxies"
+                                        name="proxies"
+                                        rows="4"
+                                        placeholder="留空则使用本机当前网络"
+                                    >
+{{.ProxiesString}}</textarea
+                                    >
+                                </div>
+                            </fieldset>
+                        </details>
+
+                        <button type="submit" class="btn-submit">
+                            🚀 开始执行抓取任务
+                        </button>
+                    </form>
                 </div>
 
-                <div class="table-section">
-                    <h2>📋 任务运行队列</h2>
-                    <div id="spinner" class="spinner"></div>
-                    <table id="job-table">
-                        <thead>
-                            <tr>
-                                <th>任务 ID</th>
-                                <th>任务名称</th>
-                                <th>创建时间</th>
-                                <th>运行状态</th>
-                                <th>操作 (下载/删除)</th>
-                            </tr>
-                        </thead>
-                        <tbody hx-get="/jobs" hx-trigger="load, every 10s">
-                        </tbody>
-                    </table>
+                <div class="content">
+                    <div class="map-section">
+                        <div id="map"></div>
+                    </div>
+
+                    <div class="table-section">
+                        <h2>📋 任务运行队列</h2>
+                        <div id="spinner" class="spinner"></div>
+                        <table id="job-table">
+                            <thead>
+                                <tr>
+                                    <th>任务 ID</th>
+                                    <th>任务名称</th>
+                                    <th>创建时间</th>
+                                    <th>运行状态</th>
+                                    <th>操作 (下载/删除)</th>
+                                </tr>
+                            </thead>
+                            <tbody
+                                hx-get="/jobs"
+                                hx-trigger="load, every 10s"
+                            ></tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-        </main>
-    </div>
+            </main>
+        </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-<script>
-let map;
-let drawnItems;
-let currentLayer = null;
+        <script>
+            let map;
+            let drawnItems;
+            let currentLayer = null;
 
-// 汉化 Leaflet.draw 的提示语言
-L.drawLocal.draw.toolbar.actions.title = '取消画图';
-L.drawLocal.draw.toolbar.actions.text = '取消';
-L.drawLocal.draw.toolbar.finish.title = '完成画图';
-L.drawLocal.draw.toolbar.finish.text = '完成';
-L.drawLocal.draw.toolbar.undo.title = '删除最后画的点';
-L.drawLocal.draw.toolbar.undo.text = '删除最后一点';
-L.drawLocal.draw.handlers.polygon.tooltip.start = '点击开始绘制多边形区域';
-L.drawLocal.draw.handlers.polygon.tooltip.cont = '点击继续绘制';
-L.drawLocal.draw.handlers.polygon.tooltip.end = '点击起点闭合多边形';
-L.drawLocal.draw.handlers.rectangle.tooltip.start = '按住鼠标拖拽绘制矩形区域';
-L.drawLocal.draw.handlers.circle.tooltip.start = '按住鼠标拖拽绘制圆形区域';
-L.drawLocal.edit.toolbar.actions.save.title = '保存修改';
-L.drawLocal.edit.toolbar.actions.save.text = '保存';
-L.drawLocal.edit.toolbar.actions.cancel.title = '取消修改';
-L.drawLocal.edit.toolbar.actions.cancel.text = '取消';
-L.drawLocal.edit.handlers.edit.tooltip.text = '拖拽节点以编辑形状';
-L.drawLocal.edit.handlers.remove.tooltip.text = '点击形状将其删除';
+            // 汉化 Leaflet.draw 的提示语言
+            L.drawLocal.draw.toolbar.actions.title = "取消画图";
+            L.drawLocal.draw.toolbar.actions.text = "取消";
+            L.drawLocal.draw.toolbar.finish.title = "完成画图";
+            L.drawLocal.draw.toolbar.finish.text = "完成";
+            L.drawLocal.draw.toolbar.undo.title = "删除最后画的点";
+            L.drawLocal.draw.toolbar.undo.text = "删除最后一点";
+            L.drawLocal.draw.handlers.polygon.tooltip.start =
+                "点击开始绘制多边形区域";
+            L.drawLocal.draw.handlers.polygon.tooltip.cont = "点击继续绘制";
+            L.drawLocal.draw.handlers.polygon.tooltip.end =
+                "点击起点闭合多边形";
+            L.drawLocal.draw.handlers.rectangle.tooltip.start =
+                "按住鼠标拖拽绘制矩形区域";
+            L.drawLocal.draw.handlers.circle.tooltip.start =
+                "按住鼠标拖拽绘制圆形区域";
+            L.drawLocal.edit.toolbar.actions.save.title = "保存修改";
+            L.drawLocal.edit.toolbar.actions.save.text = "保存";
+            L.drawLocal.edit.toolbar.actions.cancel.title = "取消修改";
+            L.drawLocal.edit.toolbar.actions.cancel.text = "取消";
+            L.drawLocal.edit.handlers.edit.tooltip.text = "拖拽节点以编辑形状";
+            L.drawLocal.edit.handlers.remove.tooltip.text = "点击形状将其删除";
 
-document.addEventListener('DOMContentLoaded', function() {
-    const latInput = document.getElementById('latitude');
-    const lonInput = document.getElementById('longitude');
-    
-    // 默认定位到北京，如果没有初始值
-    const initialLat = parseFloat(latInput.value) || 39.9042; 
-    const initialLon = parseFloat(lonInput.value) || 116.4074;
-    const initialZoom = parseInt(document.getElementById('zoom').value) || 12;
+            document.addEventListener("DOMContentLoaded", function () {
+                const latInput = document.getElementById("latitude");
+                const lonInput = document.getElementById("longitude");
 
-    // 初始化地图
-    map = L.map('map').setView([initialLat, initialLon], initialZoom);
+                // 默认定位到北京，如果没有初始值
+                const initialLat = parseFloat(latInput.value) || 39.9042;
+                const initialLon = parseFloat(lonInput.value) || 116.4074;
+                const initialZoom =
+                    parseInt(document.getElementById("zoom").value) || 12;
 
-    // 加载 OSM 免费瓦片底图
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
-        maxZoom: 19
-    }).addTo(map);
+                // 初始化地图
+                map = L.map("map").setView(
+                    [initialLat, initialLon],
+                    initialZoom,
+                );
 
-    drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
+                // 加载 OSM 免费瓦片底图
+                L.tileLayer(
+                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    {
+                        attribution: "&copy; OpenStreetMap",
+                        maxZoom: 19,
+                    },
+                ).addTo(map);
 
-    // 配置左侧的画图控制面板
-    const drawControl = new L.Control.Draw({
-        position: 'topleft',
-        draw: {
-            polyline: false, // 禁用画线（不符合区域采集逻辑）
-            marker: false,   // 禁用点位标记
-            circlemarker: false,
-            polygon: {
-                allowIntersection: false, // 不允许线条交叉
-                shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.15 }
-            },
-            rectangle: { shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.15 } },
-            circle: { shapeOptions: { color: '#0084ff', weight: 2, fillOpacity: 0.15 } }
-        },
-        edit: {
-            featureGroup: drawnItems,
-            remove: true
-        }
-    });
-    map.addControl(drawControl);
+                drawnItems = new L.FeatureGroup();
+                map.addLayer(drawnItems);
 
-    // 监听：画图完成
-    map.on(L.Draw.Event.CREATED, function (event) {
-        const layer = event.layer;
-        const type = event.layerType;
+                // 配置左侧的画图控制面板
+                const drawControl = new L.Control.Draw({
+                    position: "topleft",
+                    draw: {
+                        polyline: false, // 禁用画线（不符合区域采集逻辑）
+                        marker: false, // 禁用点位标记
+                        circlemarker: false,
+                        polygon: {
+                            allowIntersection: false, // 不允许线条交叉
+                            shapeOptions: {
+                                color: "#0084ff",
+                                weight: 2,
+                                fillOpacity: 0.15,
+                            },
+                        },
+                        rectangle: {
+                            shapeOptions: {
+                                color: "#0084ff",
+                                weight: 2,
+                                fillOpacity: 0.15,
+                            },
+                        },
+                        circle: {
+                            shapeOptions: {
+                                color: "#0084ff",
+                                weight: 2,
+                                fillOpacity: 0.15,
+                            },
+                        },
+                    },
+                    edit: {
+                        featureGroup: drawnItems,
+                        remove: true,
+                    },
+                });
+                map.addControl(drawControl);
 
-        drawnItems.clearLayers(); // 确保地图上只有一个采集区域
-        drawnItems.addLayer(layer);
-        currentLayer = layer;
+                // 监听：画图完成
+                map.on(L.Draw.Event.CREATED, function (event) {
+                    const layer = event.layer;
+                    const type = event.layerType;
 
-        updateFromLayer(layer, type);
-    });
+                    drawnItems.clearLayers(); // 确保地图上只有一个采集区域
+                    drawnItems.addLayer(layer);
+                    currentLayer = layer;
 
-    // 监听：编辑已有图形（改变大小）
-    map.on(L.Draw.Event.EDITED, function (event) {
-        const layers = event.layers;
-        layers.eachLayer(function (layer) {
-            let type = 'polygon';
-            if (layer instanceof L.Circle) type = 'circle';
-            else if (layer instanceof L.Rectangle) type = 'rectangle';
-            
-            updateFromLayer(layer, type);
-        });
-    });
+                    updateFromLayer(layer, type);
+                });
 
-    // 监听：地图层级缩放
-    map.on('zoomend', function() {
-        document.getElementById('zoom').value = map.getZoom();
-    });
-});
+                // 监听：编辑已有图形（改变大小）
+                map.on(L.Draw.Event.EDITED, function (event) {
+                    const layers = event.layers;
+                    layers.eachLayer(function (layer) {
+                        let type = "polygon";
+                        if (layer instanceof L.Circle) type = "circle";
+                        else if (layer instanceof L.Rectangle)
+                            type = "rectangle";
 
-// 获取图形信息并提取 GeoJSON 字符串，同时计算外接圆半径
-function updateFromLayer(layer, type) {
-    let centerLat, centerLng, radius = 0;
+                        updateFromLayer(layer, type);
+                    });
+                });
 
-    // 获取中心点坐标，并计算最大外接圆半径
-    if (type === 'circle') {
-        const center = layer.getLatLng();
-        centerLat = center.lat;
-        centerLng = center.lng;
-        radius = layer.getRadius(); // 如果是圆，直接拿半径
-    } else {
-        const bounds = layer.getBounds();
-        const center = bounds.getCenter();
-        centerLat = center.lat;
-        centerLng = center.lng;
+                // 监听：地图层级缩放
+                map.on("zoomend", function () {
+                    document.getElementById("zoom").value = map.getZoom();
+                });
+            });
 
-        // 如果是多边形或矩形，计算中心点到最远顶点的距离作为外接圆半径
-        const latlngs = layer.getLatLngs()[0];
-        latlngs.forEach(ll => {
-            const dist = map.distance(center, ll);
-            if (dist > radius) radius = dist;
-        });
-    }
+            // 获取图形信息并提取 GeoJSON 字符串，同时计算外接圆半径
+            function updateFromLayer(layer, type) {
+                let centerLat,
+                    centerLng,
+                    radius = 0;
 
-    // 调用 Leaflet 的原生 toGeoJSON 方法
-    let geojson = layer.toGeoJSON();
-    
-    // 补全圆形的特殊属性
-    if (type === 'circle') {
-        geojson.properties = geojson.properties || {};
-        geojson.properties.radius = Math.round(layer.getRadius());
-        geojson.properties.type = 'circle';
-    }
+                // 获取中心点坐标，并计算最大外接圆半径
+                if (type === "circle") {
+                    const center = layer.getLatLng();
+                    centerLat = center.lat;
+                    centerLng = center.lng;
+                    radius = layer.getRadius(); // 如果是圆，直接拿半径
+                } else {
+                    const bounds = layer.getBounds();
+                    const center = bounds.getCenter();
+                    centerLat = center.lat;
+                    centerLng = center.lng;
 
-    const geojsonStr = JSON.stringify(geojson, null, 2);
+                    // 如果是多边形或矩形，计算中心点到最远顶点的距离作为外接圆半径
+                    const latlngs = layer.getLatLngs()[0];
+                    latlngs.forEach((ll) => {
+                        const dist = map.distance(center, ll);
+                        if (dist > radius) radius = dist;
+                    });
+                }
 
-    // 把 radius 一并传给表单更新函数
-    updateFormInputs(centerLat, centerLng, geojsonStr, radius, map.getZoom());
-}
+                // 调用 Leaflet 的原生 toGeoJSON 方法
+                let geojson = layer.toGeoJSON();
 
-function updateFormInputs(lat, lng, geojsonStr, radius, zoom) {
-    document.getElementById('latitude').value = lat.toFixed(6);
-    document.getElementById('longitude').value = lng.toFixed(6);
-    document.getElementById('geojson').value = geojsonStr;
-    document.getElementById('radius').value = Math.round(radius); // 更新隐藏的 radius 字段
-    document.getElementById('zoom').value = zoom;
-}
-// 一键复制 GeoJSON 到剪贴板的函数
-function copyGeoJSON() {
-    const geojsonText = document.getElementById('geojson').value;
-    if (!geojsonText) {
-        alert('请先在右侧地图上绘制图形！');
-        return;
-    }
-    
-    // 调用现代浏览器的剪贴板 API
-    navigator.clipboard.writeText(geojsonText).then(() => {
-        const btn = document.getElementById('copy-geojson-btn');
-        const originalText = btn.innerHTML;
-        
-        // 视觉反馈：变为绿色成功状态
-        btn.innerHTML = '✅ 已复制';
-        btn.style.backgroundColor = '#e6f4ea';
-        btn.style.color = '#137333';
-        btn.style.borderColor = '#137333';
-        
-        // 2秒后恢复原样
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.style.backgroundColor = '#f0f2f5';
-            btn.style.color = '#333';
-            btn.style.borderColor = '#ccc';
-        }, 2000);
-    }).catch(err => {
-        console.error('复制失败:', err);
-        alert('复制失败，可能是浏览器权限限制，请手动选择复制。');
-    });
-}
-</script>
-</body>
+                // 补全圆形的特殊属性
+                if (type === "circle") {
+                    geojson.properties = geojson.properties || {};
+                    geojson.properties.radius = Math.round(layer.getRadius());
+                    geojson.properties.type = "circle";
+                }
+
+                const geojsonStr = JSON.stringify(geojson, null, 2);
+
+                // 把 radius 一并传给表单更新函数
+                updateFormInputs(
+                    centerLat,
+                    centerLng,
+                    geojsonStr,
+                    radius,
+                    map.getZoom(),
+                );
+            }
+
+            function updateFormInputs(lat, lng, geojsonStr, radius, zoom) {
+                document.getElementById("latitude").value = lat.toFixed(6);
+                document.getElementById("longitude").value = lng.toFixed(6);
+                document.getElementById("geojson").value = geojsonStr;
+                document.getElementById("radius").value = Math.round(radius); // 更新隐藏的 radius 字段
+                document.getElementById("zoom").value = zoom;
+            }
+            // 一键复制 GeoJSON 到剪贴板的函数
+            function copyGeoJSON() {
+                const geojsonText = document.getElementById("geojson").value;
+                if (!geojsonText) {
+                    alert("请先在右侧地图上绘制图形！");
+                    return;
+                }
+
+                // 调用现代浏览器的剪贴板 API
+                navigator.clipboard
+                    .writeText(geojsonText)
+                    .then(() => {
+                        const btn = document.getElementById("copy-geojson-btn");
+                        const originalText = btn.innerHTML;
+
+                        // 视觉反馈：变为绿色成功状态
+                        btn.innerHTML = "✅ 已复制";
+                        btn.style.backgroundColor = "#e6f4ea";
+                        btn.style.color = "#137333";
+                        btn.style.borderColor = "#137333";
+
+                        // 2秒后恢复原样
+                        setTimeout(() => {
+                            btn.innerHTML = originalText;
+                            btn.style.backgroundColor = "#f0f2f5";
+                            btn.style.color = "#333";
+                            btn.style.borderColor = "#ccc";
+                        }, 2000);
+                    })
+                    .catch((err) => {
+                        console.error("复制失败:", err);
+                        alert(
+                            "复制失败，可能是浏览器权限限制，请手动选择复制。",
+                        );
+                    });
+            }
+
+            function updateMapFromGeoJSON(geojsonText) {
+                const errorSpan = document.getElementById("geojson-error");
+                errorSpan.style.display = "none";
+                errorSpan.textContent = "";
+
+                if (!geojsonText || !geojsonText.trim()) {
+                    drawnItems.clearLayers();
+                    currentLayer = null;
+                    return;
+                }
+                try {
+                    const geojson = JSON.parse(geojsonText);
+
+                    if (!geojson || typeof geojson !== "object") {
+                        throw new Error("无效的 JSON 对象");
+                    }
+                    if (!geojson.type) {
+                        throw new Error("无效的 GeoJSON 格式: 缺少 type 字段");
+                    }
+
+                    drawnItems.clearLayers();
+
+                    let newLayer;
+                    if (
+                        geojson.properties &&
+                        geojson.properties.type === "circle"
+                    ) {
+                        const coords = geojson.geometry.coordinates;
+                        newLayer = L.circle([coords[1], coords[0]], {
+                            radius: geojson.properties.radius,
+                            color: "#0084ff",
+                            weight: 2,
+                            fillOpacity: 0.15,
+                        });
+                    } else {
+                        const geoJsonLayer = L.geoJSON(geojson, {
+                            style: {
+                                color: "#0084ff",
+                                weight: 2,
+                                fillOpacity: 0.15,
+                            },
+                        });
+                        newLayer = geoJsonLayer.getLayers()[0];
+                    }
+
+                    if (newLayer) {
+                        drawnItems.addLayer(newLayer);
+                        currentLayer = newLayer;
+
+                        if (newLayer.getBounds) {
+                            map.fitBounds(newLayer.getBounds());
+                        } else if (newLayer.getLatLng) {
+                            map.panTo(newLayer.getLatLng());
+                        }
+
+                        let centerLat,
+                            centerLng,
+                            radius = 0;
+                        if (newLayer instanceof L.Circle) {
+                            const center = newLayer.getLatLng();
+                            centerLat = center.lat;
+                            centerLng = center.lng;
+                            radius = newLayer.getRadius();
+                        } else {
+                            const bounds = newLayer.getBounds();
+                            const center = bounds.getCenter();
+                            centerLat = center.lat;
+                            centerLng = center.lng;
+
+                            if (newLayer.getLatLngs) {
+                                const latlngs = newLayer.getLatLngs();
+                                const flattenAndDist = (arr) => {
+                                    arr.forEach((item) => {
+                                        if (Array.isArray(item))
+                                            flattenAndDist(item);
+                                        else {
+                                            const dist = map.distance(
+                                                center,
+                                                item,
+                                            );
+                                            if (dist > radius) radius = dist;
+                                        }
+                                    });
+                                };
+                                flattenAndDist(latlngs);
+                            } else {
+                                radius = map.distance(
+                                    center,
+                                    bounds.getNorthWest(),
+                                );
+                            }
+                        }
+
+                        document.getElementById("latitude").value =
+                            centerLat.toFixed(6);
+                        document.getElementById("longitude").value =
+                            centerLng.toFixed(6);
+                        document.getElementById("radius").value =
+                            Math.round(radius);
+                    }
+                } catch (e) {
+                    errorSpan.textContent =
+                        "⚠️ " + (e.message || "解析失败，请检查 GeoJSON 格式");
+                    errorSpan.style.display = "inline";
+                }
+            }
+        </script>
+    </body>
 </html>
