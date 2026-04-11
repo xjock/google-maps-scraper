@@ -41,9 +41,11 @@
                 padding: 6px 16px;
                 margin: 0 10px;
                 cursor: pointer;
-                background: white;
-                border: 1px solid #ccc;
+                background: #0084ff;
+                color: white;
+                border: 1px solid #006bce;
                 border-radius: 4px;
+                font-weight: 600;
             "
             onclick="changePage(-1)"
         >
@@ -59,9 +61,11 @@
                 padding: 6px 16px;
                 margin: 0 10px;
                 cursor: pointer;
-                background: white;
-                border: 1px solid #ccc;
+                background: #0084ff;
+                color: white;
+                border: 1px solid #006bce;
                 border-radius: 4px;
+                font-weight: 600;
             "
             onclick="changePage(1)"
             {{if
@@ -83,34 +87,38 @@
             if (window.currentPage <= 1) {
                 let pb = document.getElementById("prev-btn");
                 pb.disabled = true;
-                pb.style.opacity = "0.5";
+                pb.style.background = "#f0f2f5";
+                pb.style.color = "#a0a0a0";
+                pb.style.borderColor = "#ccc";
                 pb.style.cursor = "not-allowed";
             }
 
             let nb = document.getElementById("next-btn");
             if (nb.hasAttribute("disabled")) {
-                nb.style.opacity = "0.5";
+                nb.style.background = "#f0f2f5";
+                nb.style.color = "#a0a0a0";
+                nb.style.borderColor = "#ccc";
                 nb.style.cursor = "not-allowed";
             }
 
-            if (typeof window.changePage === "undefined") {
-                window.changePage = function (delta) {
-                    let newPage = window.currentPage + delta;
-                    if (newPage < 1) newPage = 1;
-                    if (newPage !== window.currentPage) {
-                        window.currentPage = newPage;
-                        let tbody = document.querySelector("#job-table tbody");
-                        tbody.setAttribute(
-                            "hx-get",
-                            "/jobs?page=" + window.currentPage,
-                        );
-                        htmx.process(tbody);
-                        htmx.ajax("GET", "/jobs?page=" + window.currentPage, {
-                            target: "#job-table tbody",
-                        });
-                    }
-                };
-            }
+            window.changePage = function (delta) {
+                let newPage = window.currentPage + delta;
+                if (newPage < 1) newPage = 1;
+                if (newPage !== window.currentPage) {
+                    window.currentPage = newPage;
+                    document.getElementById("current-page-text").innerText =
+                        window.currentPage;
+                    let tbody = document.querySelector("#job-table tbody");
+                    tbody.setAttribute(
+                        "hx-get",
+                        "/jobs?page=" + window.currentPage,
+                    );
+                    htmx.process(tbody);
+                    htmx.ajax("GET", "/jobs?page=" + window.currentPage, {
+                        target: "#job-table tbody",
+                    });
+                }
+            };
         </script>
     </td>
 </tr>
