@@ -24,8 +24,13 @@ func (s *Service) Create(ctx context.Context, job *Job) error {
 	return s.repo.Create(ctx, job)
 }
 
-func (s *Service) All(ctx context.Context) ([]Job, error) {
-	return s.repo.Select(ctx, SelectParams{})
+func (s *Service) All(ctx context.Context, page int) ([]Job, error) {
+	limit := 10
+	offset := (page - 1) * limit
+	if offset < 0 {
+		offset = 0
+	}
+	return s.repo.Select(ctx, SelectParams{Limit: limit, Offset: offset})
 }
 
 func (s *Service) Get(ctx context.Context, id string) (Job, error) {

@@ -385,7 +385,13 @@ func (s *Server) getJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobs, err := s.svc.All(context.Background())
+	pageStr := r.URL.Query().Get("page")
+	page := 1
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
+	}
+
+	jobs, err := s.svc.All(context.Background(), page)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -546,7 +552,13 @@ func (s *Server) apiScrape(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) apiGetJobs(w http.ResponseWriter, r *http.Request) {
-	jobs, err := s.svc.All(r.Context())
+	pageStr := r.URL.Query().Get("page")
+	page := 1
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
+	}
+
+	jobs, err := s.svc.All(r.Context(), page)
 	if err != nil {
 		apiError := apiError{
 			Code:    http.StatusInternalServerError,

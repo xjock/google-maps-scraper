@@ -8,13 +8,109 @@
     </td>
     <td>
         {{ if eq .Status "ok" }}
-            <a href="/download?id={{.ID}}" download class="button download-button">下载</a>
+        <a href="/download?id={{.ID}}" download class="button download-button"
+            >下载</a
+        >
         {{ end }}
-        <button hx-delete="/delete?id={{.ID}}" 
-                hx-target="closest tr"
-                hx-swap="outerHTML"
-                hx-confirm="确定要删除这个任务吗？"
-                class="delete-button">删除</button>
+        <button
+            hx-delete="/delete?id={{.ID}}"
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            hx-confirm="确定要删除这个任务吗？"
+            class="delete-button"
+        >
+            删除
+        </button>
     </td>
 </tr>
 {{end}}
+<tr id="pagination-controls">
+    <td
+        colspan="5"
+        style="
+            text-align: center;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-top: 1px solid #eee;
+        "
+    >
+        <button
+            type="button"
+            id="prev-btn"
+            style="
+                padding: 6px 16px;
+                margin: 0 10px;
+                cursor: pointer;
+                background: white;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            "
+            onclick="changePage(-1)"
+        >
+            ⬅️ 上一页
+        </button>
+        <span style="font-weight: 500; color: #333"
+            >第 <span id="current-page-text">1</span> 页</span
+        >
+        <button
+            type="button"
+            id="next-btn"
+            style="
+                padding: 6px 16px;
+                margin: 0 10px;
+                cursor: pointer;
+                background: white;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            "
+            onclick="changePage(1)"
+            {{if
+            lt
+            (len
+            .)
+            10}}disabled{{end}}
+        >
+            下一页 ➡️
+        </button>
+
+        <script>
+            if (typeof window.currentPage === "undefined") {
+                window.currentPage = 1;
+            }
+            document.getElementById("current-page-text").innerText =
+                window.currentPage;
+
+            if (window.currentPage <= 1) {
+                let pb = document.getElementById("prev-btn");
+                pb.disabled = true;
+                pb.style.opacity = "0.5";
+                pb.style.cursor = "not-allowed";
+            }
+
+            let nb = document.getElementById("next-btn");
+            if (nb.hasAttribute("disabled")) {
+                nb.style.opacity = "0.5";
+                nb.style.cursor = "not-allowed";
+            }
+
+            if (typeof window.changePage === "undefined") {
+                window.changePage = function (delta) {
+                    let newPage = window.currentPage + delta;
+                    if (newPage < 1) newPage = 1;
+                    if (newPage !== window.currentPage) {
+                        window.currentPage = newPage;
+                        let tbody = document.querySelector("#job-table tbody");
+                        tbody.setAttribute(
+                            "hx-get",
+                            "/jobs?page=" + window.currentPage,
+                        );
+                        htmx.process(tbody);
+                        htmx.ajax("GET", "/jobs?page=" + window.currentPage, {
+                            target: "#job-table tbody",
+                        });
+                    }
+                };
+            }
+        </script>
+    </td>
+</tr>

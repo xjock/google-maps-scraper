@@ -18,6 +18,8 @@ const (
 type SelectParams struct {
 	Status string
 	Limit  int
+	Offset int
+	Page   int
 }
 
 type JobRepository interface {

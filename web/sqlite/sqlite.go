@@ -75,6 +75,15 @@ func (repo *repo) Select(ctx context.Context, params web.SelectParams) ([]web.Jo
 		args = append(args, params.Limit)
 	}
 
+	if params.Offset > 0 {
+		if params.Limit <= 0 {
+			q += " LIMIT -1"
+		}
+		q += " OFFSET ?"
+
+		args = append(args, params.Offset)
+	}
+
 	rows, err := repo.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, err
