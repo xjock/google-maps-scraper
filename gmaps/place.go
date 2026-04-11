@@ -10,13 +10,17 @@ import (
 	"github.com/gosom/scrapemate"
 
 	"github.com/xjock/google-maps-scraper/exiter"
+	"github.com/xjock/google-maps-scraper/grid"
 )
+
+// ErrSkippedOutOfBounds is returned when a place is dropped because it's outside the defined GeoJSON boundary.
+var ErrSkippedOutOfBounds = fmt.Errorf("skipped: place is outside the defined bounds")
 
 type PlaceJobOptions func(*PlaceJob)
 
 type PlaceJob struct {
 	scrapemate.Job
-	GeoJSON                 string // <-- 加上这行
+	GeoJSON                 string
 	UsageInResultststs      bool
 	ExtractEmail            bool
 	ExitMonitor             exiter.Exiter
@@ -65,6 +69,15 @@ func WithPlaceJobWriterManagedCompletion() PlaceJobOptions {
 	}
 }
 
+func WithPlaceJobGeoJSON(geojson string) PlaceJobOptions {
+	return func(j *PlaceJob) {
+		j.GeoJSON = geojson
+	}
+}
+
+// ==========================================
+// 修复点：修改 ProcessOnFetchError，确保因边界过滤产生的 error 不会被重试
+// ==========================================
 func (j *PlaceJob) ProcessOnFetchError() bool {
 	return true
 }
@@ -101,6 +114,25 @@ func (j *PlaceJob) Process(_ context.Context, resp *scrapemate.Response) (any, [
 
 		return nil, nil, err
 	}
+
+	// ==========================================
+	// 核心修复：常规模式的 GeoJSON 切割丢弃（返回 ErrSkippedOutOfBounds）
+	// ==========================================
+	if j.GeoJSON != "" {
+		polygon, parseErr := grid.ParseGeoJSONPolygon(j.GeoJSON)
+		if parseErr == nil && len(polygon) > 0 {
+			pt := grid.Point{Lng: entry.Longtitude, Lat: entry.Latitude}
+			if !grid.IsPointInPolygon(pt, polygon) {
+				// 坐标不在多边形内！
+				if j.ExitMonitor != nil && !j.WriterManagedCompletion {
+					j.ExitMonitor.IncrPlacesCompleted(1)
+				}
+				// 必须返回 error 而不是 nil，防止 CSV 写入器崩溃
+				return nil, nil, ErrSkippedOutOfBounds
+			}
+		}
+	}
+	// ==========================================
 
 	entry.ID = j.ParentID
 
@@ -217,7 +249,6 @@ func (j *PlaceJob) getRaw(ctx context.Context, page scrapemate.BrowserPage) (any
 			}
 
 			// Check for valid non-null result
-			// go-rod may return nil for JS null, or empty string
 			if raw == nil {
 				<-time.After(time.Millisecond * 200)
 				continue
@@ -292,12 +323,6 @@ func (j *PlaceJob) getReviewCount(data []byte) int {
 
 func (j *PlaceJob) UseInResults() bool {
 	return j.UsageInResultststs
-}
-
-func WithPlaceJobGeoJSON(geojson string) PlaceJobOptions {
-	return func(j *PlaceJob) {
-		j.GeoJSON = geojson
-	}
 }
 
 const js = `

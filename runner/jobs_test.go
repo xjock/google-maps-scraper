@@ -41,15 +41,16 @@ func TestCreateSeedJobsRejectsEmptyQueryBeforeCustomID(t *testing.T) {
 	_, err := runner.CreateSeedJobs(
 		false,
 		"en",
-		strings.NewReader("  #!#my-id\n"),
+		strings.NewReader("\n#!# custom123"),
 		10,
 		false,
 		"",
 		15,
-		10000,
+		1000,
 		nil,
 		nil,
 		false,
+		"",
 	)
 	if err == nil || !strings.Contains(err.Error(), "empty query text") {
 		t.Fatalf("expected empty query text error, got %v", err)

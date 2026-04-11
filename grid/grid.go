@@ -85,8 +85,7 @@ type Cell struct {
 	Lon float64
 }
 
-// GeoCoordinates returns the cell center in "lat,lon" format, ready to pass
-// to gmaps.NewGmapJob as the geoCoordinates parameter.
+// GeoCoordinates returns the cell center in "lat,lon" format.
 func (c Cell) GeoCoordinates() string {
 	return fmt.Sprintf("%f,%f", c.Lat, c.Lon)
 }
@@ -100,16 +99,13 @@ type Point struct {
 // IsPointInPolygon uses the ray-casting algorithm to determine if a point is inside a polygon.
 func IsPointInPolygon(point Point, polygon []Point) bool {
 	if len(polygon) < 3 {
-		return false // A polygon must have at least 3 vertices
+		return false
 	}
 	intersectCount := 0
 	for i := 0; i < len(polygon); i++ {
 		p1 := polygon[i]
 		p2 := polygon[(i+1)%len(polygon)] // next vertex, wrapping around
 
-		// 检查射线是否穿过边。
-		// 注意这里的判断逻辑：如果点的纬度 (Lat/Y) 在两点之间，
-		// 并且点的经度 (Lng/X) 小于交点的经度，则射线相交。
 		if ((p1.Lat > point.Lat) != (p2.Lat > point.Lat)) &&
 			(point.Lng < (p2.Lng-p1.Lng)*(point.Lat-p1.Lat)/(p2.Lat-p1.Lat)+p1.Lng) {
 			intersectCount++
@@ -118,77 +114,78 @@ func IsPointInPolygon(point Point, polygon []Point) bool {
 	return intersectCount%2 == 1
 }
 
-// ParseGeoJSONPolygon extracts a slice of Point from a standard GeoJSON string.
+// ParseGeoJSONPolygon 健壮的 GeoJSON 提取器
 func ParseGeoJSONPolygon(geoJsonStr string) ([]Point, error) {
 	if geoJsonStr == "" {
 		return nil, nil
 	}
 
-	var feature struct {
-		Geometry struct {
-			Type        string        `json:"type"`
-			Coordinates []interface{} `json:"coordinates"`
-		} `json:"geometry"`
-		Properties struct {
-			Type   string  `json:"type"`
-			Radius float64 `json:"radius"`
-		} `json:"properties"`
+	var root map[string]interface{}
+	if err := json.Unmarshal([]byte(geoJsonStr), &root); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
-	if err := json.Unmarshal([]byte(geoJsonStr), &feature); err != nil {
-		return nil, fmt.Errorf("failed to parse geojson: %w", err)
+	var geom map[string]interface{}
+	typ, _ := root["type"].(string)
+
+	// 支持解析各种层级的 GeoJSON 格式
+	if typ == "FeatureCollection" {
+		features, ok := root["features"].([]interface{})
+		if ok && len(features) > 0 {
+			f, _ := features[0].(map[string]interface{})
+			geom, _ = f["geometry"].(map[string]interface{})
+		}
+	} else if typ == "Feature" {
+		geom, _ = root["geometry"].(map[string]interface{})
+	} else if typ == "Polygon" || typ == "Point" {
+		geom = root
 	}
 
-	if feature.Geometry.Type == "Polygon" {
-		if len(feature.Geometry.Coordinates) == 0 {
-			return nil, fmt.Errorf("empty polygon coordinates")
+	if geom == nil {
+		return nil, fmt.Errorf("no geometry found in GeoJSON")
+	}
+
+	if geom["type"] != "Polygon" {
+		if geom["type"] == "Point" {
+			// 是原生圆形点，交由常规半径处理
+			return nil, nil
 		}
+		return nil, fmt.Errorf("geometry is not a Polygon, got: %v", geom["type"])
+	}
 
-		// GeoJSON Polygon coordinates are an array of linear rings. [0] is the exterior ring.
-		rings, ok := feature.Geometry.Coordinates[0].([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("invalid polygon coordinates format")
-		}
+	coords, ok := geom["coordinates"].([]interface{})
+	if !ok || len(coords) == 0 {
+		return nil, fmt.Errorf("invalid coordinates array")
+	}
 
-		var points []Point
-		for _, pt := range rings {
-			coords, ok := pt.([]interface{})
-			if ok && len(coords) >= 2 {
-				// =========================================
-				// 修复点：明确并强制提取为 float64，防止解析成其他类型导致错乱
-				// 并且根据 GeoJSON 标准：coords[0] 是经度 (Lng), coords[1] 是纬度 (Lat)
-				// =========================================
-				var lng, lat float64
+	rings, ok := coords[0].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid exterior ring")
+	}
 
-				switch v := coords[0].(type) {
-				case float64:
-					lng = v
-				case int:
-					lng = float64(v)
-				}
-
-				switch v := coords[1].(type) {
-				case float64:
-					lat = v
-				case int:
-					lat = float64(v)
-				}
-
-				points = append(points, Point{Lng: lng, Lat: lat})
+	var points []Point
+	for _, pt := range rings {
+		c, ok := pt.([]interface{})
+		if ok && len(c) >= 2 {
+			var lng, lat float64
+			switch v := c[0].(type) {
+			case float64:
+				lng = v
+			case int:
+				lng = float64(v)
 			}
+			switch v := c[1].(type) {
+			case float64:
+				lat = v
+			case int:
+				lat = float64(v)
+			}
+			points = append(points, Point{Lng: lng, Lat: lat})
 		}
-		return points, nil
 	}
-
-	if feature.Geometry.Type == "Point" && feature.Properties.Type == "circle" {
-		// Native circles fallback to standard radius grid search.
-		return nil, nil
-	}
-
-	return nil, fmt.Errorf("unsupported geometry type: %s", feature.Geometry.Type)
+	return points, nil
 }
 
-// FilterCells removes cells that fall completely outside the provided GeoJSON polygon.
 func FilterCells(cells []Cell, polygon []Point) []Cell {
 	if len(polygon) == 0 {
 		return cells
@@ -221,7 +218,6 @@ func GenerateCells(bbox BoundingBox, cellSizeKm float64) []Cell {
 	return cells
 }
 
-// EstimateCellCount returns how many cells GenerateCells would produce
 func EstimateCellCount(bbox BoundingBox, cellSizeKm float64) int {
 	cellSizeKm = normalizeCellSizeKm(cellSizeKm)
 
@@ -246,7 +242,6 @@ func normalizeCellSizeKm(cellSizeKm float64) float64 {
 	if cellSizeKm <= 0 {
 		return 1.0
 	}
-
 	return cellSizeKm
 }
 
@@ -261,6 +256,5 @@ func calculateLonStep(bbox BoundingBox, cellSizeKm float64) float64 {
 			cosMidLat = minCosLatitude
 		}
 	}
-
 	return cellSizeKm / (kmPerDegreeLat * cosMidLat)
 }

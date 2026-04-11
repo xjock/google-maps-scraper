@@ -207,6 +207,7 @@ func (w *ScrapeWorker) Work(ctx context.Context, job *river.Job[ScrapeJobArgs]) 
 		opts := []gmaps.GmapJobOptions{
 			gmaps.WithExitMonitor(exitMon),
 			gmaps.WithWriterManagedCompletion(),
+			gmaps.WithGmapJobGeoJSON(args.GeoJSON), // <--- 修复：把 GeoJSON 传进非极速模式！
 		}
 
 		if args.ExtraReviews {

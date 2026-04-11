@@ -30,6 +30,7 @@ func CreateSeedJobs(
 	dedup deduper.Deduper,
 	exitMonitor exiter.Exiter,
 	extraReviews bool,
+	geoJSON string,
 ) (jobs []scrapemate.IJob, err error) {
 	var lat, lon float64
 
@@ -101,6 +102,9 @@ func CreateSeedJobs(
 			if extraReviews {
 				opts = append(opts, gmaps.WithExtraReviews())
 			}
+			if geoJSON != "" {
+				opts = append(opts, gmaps.WithGmapJobGeoJSON(geoJSON))
+			}
 
 			job = gmaps.NewGmapJob(id, langCode, query, maxDepth, email, geoCoordinates, zoom, opts...)
 		} else {
@@ -115,6 +119,7 @@ func CreateSeedJobs(
 				ViewportW: 1920,
 				ViewportH: 450,
 				Hl:        langCode,
+				GeoJSON:   geoJSON,
 			}
 
 			opts := []gmaps.SearchJobOptions{}

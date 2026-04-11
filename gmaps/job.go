@@ -24,11 +24,18 @@ type GmapJob struct {
 	MaxDepth     int
 	LangCode     string
 	ExtractEmail bool
+	GeoJSON      string // <-- 新增字段
 
 	Deduper                 deduper.Deduper
 	ExitMonitor             exiter.Exiter
 	ExtractExtraReviews     bool
 	WriterManagedCompletion bool
+}
+
+func WithGmapJobGeoJSON(geojson string) GmapJobOptions {
+	return func(j *GmapJob) {
+		j.GeoJSON = geojson
+	}
 }
 
 func NewGmapJob(
@@ -50,14 +57,10 @@ func NewGmapJob(
 		id = uuid.New().String()
 	}
 
-	// ==========================================
-	// 修复点：换回真实的 Google Maps URL 格式
-	// ==========================================
 	mapURL := ""
 	if geoCoordinates != "" && zoom > 0 {
 		mapURL = fmt.Sprintf("https://www.google.com/maps/search/%s/@%s,%dz", query, strings.ReplaceAll(geoCoordinates, " ", ""), zoom)
 	} else {
-		// Warning: geo and zoom MUST be both set or not
 		mapURL = fmt.Sprintf("https://www.google.com/maps/search/%s", query)
 	}
 
@@ -124,7 +127,6 @@ func (j *GmapJob) Process(ctx context.Context, resp *scrapemate.Response) (any, 
 		if j.ExitMonitor != nil {
 			j.ExitMonitor.IncrSeedCompleted(1)
 		}
-
 		return nil, nil, resp.Error
 	}
 
@@ -135,7 +137,6 @@ func (j *GmapJob) Process(ctx context.Context, resp *scrapemate.Response) (any, 
 		if j.ExitMonitor != nil {
 			j.ExitMonitor.IncrSeedCompleted(1)
 		}
-
 		return nil, nil, fmt.Errorf("could not convert to goquery document")
 	}
 
@@ -151,6 +152,11 @@ func (j *GmapJob) Process(ctx context.Context, resp *scrapemate.Response) (any, 
 			jopts = append(jopts, WithPlaceJobWriterManagedCompletion())
 		}
 
+		// 透传 GeoJSON
+		if j.GeoJSON != "" {
+			jopts = append(jopts, WithPlaceJobGeoJSON(j.GeoJSON))
+		}
+
 		placeJob := NewPlaceJob(j.ID, j.LangCode, resp.URL, j.ExtractEmail, j.ExtractExtraReviews, jopts...)
 
 		next = append(next, placeJob)
@@ -164,6 +170,11 @@ func (j *GmapJob) Process(ctx context.Context, resp *scrapemate.Response) (any, 
 
 				if j.WriterManagedCompletion {
 					jopts = append(jopts, WithPlaceJobWriterManagedCompletion())
+				}
+
+				// 透传 GeoJSON
+				if j.GeoJSON != "" {
+					jopts = append(jopts, WithPlaceJobGeoJSON(j.GeoJSON))
 				}
 
 				nextJob := NewPlaceJob(j.ID, j.LangCode, href, j.ExtractEmail, j.ExtractExtraReviews, jopts...)

@@ -86,10 +86,11 @@ func (l *lambdaAwsRunner) handler(ctx context.Context, input lInput) error {
 		false,
 		"",
 		0,
-		10000, // TODO support radius
+		0,
 		nil,
-		exitMonitor,
-		input.ExtraReviews,
+		exiter.New(),
+		false,
+		"",
 	)
 	if err != nil {
 		return err

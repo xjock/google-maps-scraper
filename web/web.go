@@ -325,6 +325,7 @@ func (s *Server) scrape(w http.ResponseWriter, r *http.Request) {
 
 	newJob.Data.Lat = r.Form.Get("latitude")
 	newJob.Data.Lon = r.Form.Get("longitude")
+	newJob.Data.GeoJSON = r.Form.Get("geojson")
 
 	newJob.Data.Depth, err = strconv.Atoi(r.Form.Get("depth"))
 	if err != nil {
