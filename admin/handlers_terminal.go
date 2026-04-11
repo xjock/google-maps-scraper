@@ -13,8 +13,8 @@ import (
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/gosom/google-maps-scraper/infra"
-	"github.com/gosom/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/infra"
+	"github.com/xjock/google-maps-scraper/log"
 )
 
 var wsUpgrader = websocket.Upgrader{

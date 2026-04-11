@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gosom/google-maps-scraper/scraper"
 	"github.com/stretchr/testify/require"
+	"github.com/xjock/google-maps-scraper/scraper"
 )
 
 func TestWaitForFlushResultReturnsResultWithinGrace(t *testing.T) {

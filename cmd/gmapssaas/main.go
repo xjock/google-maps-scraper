@@ -7,16 +7,16 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/gosom/google-maps-scraper/cmd/gmapssaas/cmdadmin"
-	"github.com/gosom/google-maps-scraper/cmd/gmapssaas/cmdprovision"
-	"github.com/gosom/google-maps-scraper/cmd/gmapssaas/cmdserve"
-	"github.com/gosom/google-maps-scraper/cmd/gmapssaas/cmdupdate"
-	"github.com/gosom/google-maps-scraper/cmd/gmapssaas/cmdworker"
-	"github.com/gosom/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/cmd/gmapssaas/cmdadmin"
+	"github.com/xjock/google-maps-scraper/cmd/gmapssaas/cmdprovision"
+	"github.com/xjock/google-maps-scraper/cmd/gmapssaas/cmdserve"
+	"github.com/xjock/google-maps-scraper/cmd/gmapssaas/cmdupdate"
+	"github.com/xjock/google-maps-scraper/cmd/gmapssaas/cmdworker"
+	"github.com/xjock/google-maps-scraper/log"
 
 	// Register infrastructure providers.
-	_ "github.com/gosom/google-maps-scraper/infra/digitalocean"
-	_ "github.com/gosom/google-maps-scraper/infra/hetzner"
+	_ "github.com/xjock/google-maps-scraper/infra/digitalocean"
+	_ "github.com/xjock/google-maps-scraper/infra/hetzner"
 )
 
 func main() {

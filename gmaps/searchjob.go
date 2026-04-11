@@ -7,8 +7,9 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/gosom/google-maps-scraper/exiter"
 	"github.com/gosom/scrapemate"
+	"github.com/xjock/google-maps-scraper/exiter"
+	"github.com/xjock/google-maps-scraper/grid" // <-- 新增：导入我们修改过的 grid 包
 )
 
 type SearchJobOptions func(*SearchJob)
@@ -26,6 +27,7 @@ type MapSearchParams struct {
 	ViewportW int
 	ViewportH int
 	Hl        string
+	GeoJSON   string // <-- 新增：用于接收前端传来的 GeoJSON 边界数据
 }
 
 type SearchJob struct {
@@ -112,11 +114,43 @@ func (j *SearchJob) Process(_ context.Context, resp *scrapemate.Response) (any, 
 		return nil, nil, fmt.Errorf("failed to parse search results: %w", err)
 	}
 
-	entries = filterAndSortEntriesWithinRadius(entries,
-		j.params.Location.Lat,
-		j.params.Location.Lon,
-		j.params.Location.Radius,
-	)
+	// ==========================================
+	// 核心逻辑修改：空间边界过滤 (Spatial Filtering)
+	// ==========================================
+	if j.params.GeoJSON != "" {
+		// 1. 尝试解析 GeoJSON 多边形
+		polygon, err := grid.ParseGeoJSONPolygon(j.params.GeoJSON)
+
+		if err == nil && len(polygon) > 0 {
+			// 2. 如果是多边形或矩形，使用精准的射线法过滤
+			filtered := entries[:0] // Go 语言的高效原地(in-place)过滤切片技巧
+			for _, entry := range entries {
+				// 提取 POI 的经纬度 (假设 entry 中字段名为 Longitude 和 Latitude)
+				pt := grid.Point{Lng: entry.Longtitude, Lat: entry.Latitude}
+
+				// 仅保留在多边形内部的商家
+				if grid.IsPointInPolygon(pt, polygon) {
+					filtered = append(filtered, entry)
+				}
+			}
+			entries = filtered
+		} else {
+			// 3. 如果解析为空（说明用户画的是圆形，或者是旧版任务），回退到默认的圆形半径过滤算法
+			entries = filterAndSortEntriesWithinRadius(entries,
+				j.params.Location.Lat,
+				j.params.Location.Lon,
+				j.params.Location.Radius,
+			)
+		}
+	} else {
+		// 如果完全没有传 GeoJSON，也走默认半径过滤
+		entries = filterAndSortEntriesWithinRadius(entries,
+			j.params.Location.Lat,
+			j.params.Location.Lon,
+			j.params.Location.Radius,
+		)
+	}
+	// ==========================================
 
 	if j.ExitMonitor != nil {
 		j.ExitMonitor.IncrPlacesFound(len(entries))

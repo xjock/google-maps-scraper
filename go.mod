@@ -1,4 +1,4 @@
-module github.com/gosom/google-maps-scraper
+module github.com/xjock/google-maps-scraper
 
 go 1.26.1
 

@@ -10,9 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gosom/google-maps-scraper/exiter"
-	"github.com/gosom/google-maps-scraper/gmaps"
-	"github.com/gosom/google-maps-scraper/scraper"
 	"github.com/gosom/scrapemate"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,8 +17,10 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivertype"
 	"github.com/speps/go-hashids/v2"
-
-	"github.com/gosom/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/exiter"
+	"github.com/xjock/google-maps-scraper/gmaps"
+	"github.com/xjock/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/scraper"
 )
 
 var hashIDCodec *hashids.HashID
@@ -90,6 +89,7 @@ type ScrapeJobArgs struct {
 	MaxDepth       int     `json:"max_depth"`
 	Email          bool    `json:"email"`
 	GeoCoordinates string  `json:"geo_coordinates"`
+	GeoJSON        string  `json:"geojson"` // <-- 新增：保存边界多边形
 	Zoom           int     `json:"zoom"`
 	Radius         float64 `json:"radius"`
 	FastMode       bool    `json:"fast_mode"`
@@ -176,8 +176,9 @@ func (w *ScrapeWorker) Work(ctx context.Context, job *river.Job[ScrapeJobArgs]) 
 
 	if args.FastMode {
 		params := &gmaps.MapSearchParams{
-			Query: args.Keyword,
-			Hl:    args.Lang,
+			Query:   args.Keyword,
+			Hl:      args.Lang,
+			GeoJSON: args.GeoJSON, // <-- 修复点：确保急速模式下，GeoJSON 被传递给底层 SearchJob
 		}
 
 		if args.GeoCoordinates != "" {
@@ -477,7 +478,6 @@ func NewWorkerClient(dbPool *pgxpool.Pool, manager ScrapeManager) (*Client, erro
 		},
 		Workers:              workers,
 		Logger:               logger,
-		JobTimeout:           maxScrapeTimeout + 2*time.Minute,
 		RescueStuckJobsAfter: 20 * time.Minute,
 	})
 	if err != nil {
@@ -886,7 +886,6 @@ func (c *Client) InsertWorkerProvisionJob(ctx context.Context, args WorkerProvis
 	return nil
 }
 
-// InsertWorkerDeleteJob queues a background job to delete a cloud worker.
 // DashboardStats holds summary statistics for the admin dashboard.
 type DashboardStats struct {
 	JobsToday    int
@@ -914,6 +913,7 @@ func (c *Client) GetDashboardStats(ctx context.Context) (*DashboardStats, error)
 	return stats, nil
 }
 
+// InsertWorkerDeleteJob queues a background job to delete a cloud worker.
 func (c *Client) InsertWorkerDeleteJob(ctx context.Context, args WorkerDeleteArgs) error {
 	_, err := c.riverClient.Insert(ctx, args, nil)
 	if err != nil {

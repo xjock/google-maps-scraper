@@ -5,7 +5,7 @@ import (
 
 	"riverqueue.com/riverui"
 
-	"github.com/gosom/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/log"
 )
 
 func CreateRiverUIHandler(_ context.Context, client *Client) (*riverui.Handler, error) {

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gosom/google-maps-scraper/gmaps"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/xjock/google-maps-scraper/gmaps"
 )
 
 // noopSave records the entries it receives without touching a DB.

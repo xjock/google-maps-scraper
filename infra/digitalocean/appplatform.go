@@ -8,7 +8,7 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/gosom/google-maps-scraper/infra"
+	"github.com/xjock/google-maps-scraper/infra"
 )
 
 var _ infra.Provisioner = (*AppPlatformProvisioner)(nil)

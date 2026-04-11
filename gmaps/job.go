@@ -12,8 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/gosom/scrapemate"
 
-	"github.com/gosom/google-maps-scraper/deduper"
-	"github.com/gosom/google-maps-scraper/exiter"
+	"github.com/xjock/google-maps-scraper/deduper"
+	"github.com/xjock/google-maps-scraper/exiter"
 )
 
 type GmapJobOptions func(*GmapJob)
@@ -50,6 +50,9 @@ func NewGmapJob(
 		id = uuid.New().String()
 	}
 
+	// ==========================================
+	// 修复点：换回真实的 Google Maps URL 格式
+	// ==========================================
 	mapURL := ""
 	if geoCoordinates != "" && zoom > 0 {
 		mapURL = fmt.Sprintf("https://www.google.com/maps/search/%s/@%s,%dz", query, strings.ReplaceAll(geoCoordinates, " ", ""), zoom)

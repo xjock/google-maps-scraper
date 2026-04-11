@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gosom/google-maps-scraper/grid"
-	"github.com/gosom/google-maps-scraper/runner"
+	"github.com/xjock/google-maps-scraper/grid"
+	"github.com/xjock/google-maps-scraper/runner"
 )
 
 func TestCreateGridSeedJobsRejectsInvalidZoom(t *testing.T) {

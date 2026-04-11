@@ -8,7 +8,7 @@ import (
 
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 
-	"github.com/gosom/google-maps-scraper/infra"
+	"github.com/xjock/google-maps-scraper/infra"
 )
 
 const sshKeyName = "gmapssaas-worker"

@@ -11,7 +11,7 @@ const docTemplate = `{
         "title": "{{.Title}}",
         "contact": {
             "name": "API 支持",
-            "url": "https://github.com/gosom/google-maps-scraper"
+            "url": "https://github.com/xjock/google-maps-scraper"
         },
         "license": {
             "name": "MIT",

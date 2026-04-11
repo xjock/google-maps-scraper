@@ -18,7 +18,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /gmapssaas ./cmd/gmaps
 
 # Final stage - Debian slim with Playwright Chromium dependencies
 FROM debian:bookworm-slim
-LABEL org.opencontainers.image.source=https://github.com/gosom/google-maps-scraper
+LABEL org.opencontainers.image.source=https://github.com/xjock/google-maps-scraper
 
 WORKDIR /app
 

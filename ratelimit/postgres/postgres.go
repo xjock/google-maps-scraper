@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gosom/google-maps-scraper/ratelimit"
+	"github.com/xjock/google-maps-scraper/ratelimit"
 )
 
 var _ ratelimit.Store = (*Store)(nil)

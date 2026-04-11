@@ -173,7 +173,7 @@ host: localhost:8080
 info:
   contact:
     name: API 支持
-    url: https://github.com/gosom/google-maps-scraper
+    url: https://github.com/xjock/google-maps-scraper
   description: 用于异步抓取 Google Maps 数据的 API
   license:
     name: MIT

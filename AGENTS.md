@@ -10,7 +10,7 @@
 
 ## Code Style Guidelines
 - Use `gofmt` for formatting (spaces, not tabs)
-- Import order: standard library, third-party, local packages (prefix: github.com/gosom/google-maps-scraper)
+- Import order: standard library, third-party, local packages (prefix: github.com/xjock/google-maps-scraper)
 - Use descriptive variable names (e.g., `entry`, `cfg`, `ctx`)
 - Error handling: return errors, use `fmt.Errorf` with wrapping (`%w`)
 - Use struct tags for JSON marshaling: `json:"field_name"`

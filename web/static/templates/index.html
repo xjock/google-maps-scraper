@@ -134,7 +134,7 @@
                         </div>
                         <div class="form-group">
                             <label for="lang">结果语言 (如 zh-CN, en):</label>
-                            <input type="text" id="lang" name="lang" value="en" placeholder="推荐使用 en 获取最准数据">
+                            <input type="text" id="lang" name="lang" value="zh-CN" placeholder="推荐使用 zh-CN 获取最准数据">
                         </div>
                     </fieldset>
                     
@@ -163,9 +163,13 @@
                                 <input type="number" step="0.000000000000001" id="longitude" name="longitude" value="{{.Lon}}" readonly style="background-color: #f0f2f5; color: #666; cursor: not-allowed;">
                             </div>
                             <div class="form-group">
-                                <label for="geojson">绘制图形 (GeoJSON):</label>
-                                <textarea id="geojson" name="geojson" rows="5" readonly style="background-color: #e8f0fe; color: #0084ff; font-family: monospace; font-size: 12px; cursor: not-allowed; resize: vertical;"></textarea>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
+                                    <label for="geojson" style="margin-bottom: 0;">绘制图形 (GeoJSON):</label>
+                                    <button type="button" id="copy-geojson-btn" onclick="copyGeoJSON()" style="padding: 3px 8px; font-size: 0.85em; cursor: pointer; background-color: #f0f2f5; border: 1px solid #ccc; border-radius: 4px; color: #333; transition: all 0.2s;">📋 复制</button>
+                                </div>
+                                <textarea id="geojson" name="geojson" rows="5" readonly style="background-color: #e8f0fe; color: #0084ff; font-family: monospace; font-size: 12px; cursor: not-allowed; resize: vertical; margin-top:0;"></textarea>
                             </div>
+                            <input type="hidden" id="radius" name="radius" value="{{.Radius}}">
                         </fieldset>
                     </details>
                     
@@ -336,44 +340,83 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// 获取图形信息并提取 GeoJSON 字符串
+// 获取图形信息并提取 GeoJSON 字符串，同时计算外接圆半径
 function updateFromLayer(layer, type) {
-    let centerLat, centerLng;
+    let centerLat, centerLng, radius = 0;
 
-    // 获取中心点坐标（保持纬度和经度的中心点显示）
+    // 获取中心点坐标，并计算最大外接圆半径
     if (type === 'circle') {
         const center = layer.getLatLng();
         centerLat = center.lat;
         centerLng = center.lng;
+        radius = layer.getRadius(); // 如果是圆，直接拿半径
     } else {
         const bounds = layer.getBounds();
         const center = bounds.getCenter();
         centerLat = center.lat;
         centerLng = center.lng;
+
+        // 如果是多边形或矩形，计算中心点到最远顶点的距离作为外接圆半径
+        const latlngs = layer.getLatLngs()[0];
+        latlngs.forEach(ll => {
+            const dist = map.distance(center, ll);
+            if (dist > radius) radius = dist;
+        });
     }
 
     // 调用 Leaflet 的原生 toGeoJSON 方法
     let geojson = layer.toGeoJSON();
     
-    // 特殊处理：标准 GeoJSON 不支持严格意义上的"圆形"，默认输出为 Point。
-    // 这里我们将半径(radius)附加上去，保证数据不丢失。
+    // 补全圆形的特殊属性
     if (type === 'circle') {
         geojson.properties = geojson.properties || {};
         geojson.properties.radius = Math.round(layer.getRadius());
         geojson.properties.type = 'circle';
     }
 
-    // 格式化为带有缩进的字符串
     const geojsonStr = JSON.stringify(geojson, null, 2);
 
-    updateFormInputs(centerLat, centerLng, geojsonStr, map.getZoom());
+    // 把 radius 一并传给表单更新函数
+    updateFormInputs(centerLat, centerLng, geojsonStr, radius, map.getZoom());
 }
 
-function updateFormInputs(lat, lng, geojsonStr, zoom) {
+function updateFormInputs(lat, lng, geojsonStr, radius, zoom) {
     document.getElementById('latitude').value = lat.toFixed(6);
     document.getElementById('longitude').value = lng.toFixed(6);
     document.getElementById('geojson').value = geojsonStr;
+    document.getElementById('radius').value = Math.round(radius); // 更新隐藏的 radius 字段
     document.getElementById('zoom').value = zoom;
+}
+// 一键复制 GeoJSON 到剪贴板的函数
+function copyGeoJSON() {
+    const geojsonText = document.getElementById('geojson').value;
+    if (!geojsonText) {
+        alert('请先在右侧地图上绘制图形！');
+        return;
+    }
+    
+    // 调用现代浏览器的剪贴板 API
+    navigator.clipboard.writeText(geojsonText).then(() => {
+        const btn = document.getElementById('copy-geojson-btn');
+        const originalText = btn.innerHTML;
+        
+        // 视觉反馈：变为绿色成功状态
+        btn.innerHTML = '✅ 已复制';
+        btn.style.backgroundColor = '#e6f4ea';
+        btn.style.color = '#137333';
+        btn.style.borderColor = '#137333';
+        
+        // 2秒后恢复原样
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.backgroundColor = '#f0f2f5';
+            btn.style.color = '#333';
+            btn.style.borderColor = '#ccc';
+        }, 2000);
+    }).catch(err => {
+        console.error('复制失败:', err);
+        alert('复制失败，可能是浏览器权限限制，请手动选择复制。');
+    });
 }
 </script>
 </body>

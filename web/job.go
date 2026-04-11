@@ -66,6 +66,7 @@ type JobData struct {
 	Zoom     int           `json:"zoom"`
 	Lat      string        `json:"lat"`
 	Lon      string        `json:"lon"`
+	GeoJSON  string        `json:"geojson"`
 	FastMode bool          `json:"fast_mode"`
 	Radius   int           `json:"radius"`
 	Depth    int           `json:"depth"`
@@ -83,8 +84,9 @@ func (d *JobData) Validate() error {
 		return errors.New("missing lang")
 	}
 
-	if len(d.Lang) != 2 {
-		return errors.New("invalid lang")
+	// 允许像 zh-CN, en-US 这样的标准地区语言代码 (2 到 10 位)
+	if len(d.Lang) < 2 || len(d.Lang) > 10 {
+		return errors.New("invalid lang (must be between 2 and 10 characters)")
 	}
 
 	if d.Depth == 0 {

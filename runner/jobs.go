@@ -11,11 +11,11 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/gosom/google-maps-scraper/deduper"
-	"github.com/gosom/google-maps-scraper/exiter"
-	"github.com/gosom/google-maps-scraper/gmaps"
-	"github.com/gosom/google-maps-scraper/grid"
 	"github.com/gosom/scrapemate"
+	"github.com/xjock/google-maps-scraper/deduper"
+	"github.com/xjock/google-maps-scraper/exiter"
+	"github.com/xjock/google-maps-scraper/gmaps"
+	"github.com/xjock/google-maps-scraper/grid"
 )
 
 func CreateSeedJobs(

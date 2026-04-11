@@ -10,7 +10,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/gosom/google-maps-scraper/infra"
+	"github.com/xjock/google-maps-scraper/infra"
 )
 
 const apiBase = "https://api.planetscale.com/v1"

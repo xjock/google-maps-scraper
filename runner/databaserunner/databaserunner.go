@@ -10,11 +10,11 @@ import (
 	// postgres driver
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/gosom/google-maps-scraper/postgres"
-	"github.com/gosom/google-maps-scraper/runner"
-	"github.com/gosom/google-maps-scraper/tlmt"
 	"github.com/gosom/scrapemate"
 	"github.com/gosom/scrapemate/scrapemateapp"
+	"github.com/xjock/google-maps-scraper/postgres"
+	"github.com/xjock/google-maps-scraper/runner"
+	"github.com/xjock/google-maps-scraper/tlmt"
 )
 
 type dbrunner struct {

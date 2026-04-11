@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gosom/google-maps-scraper/cryptoext"
-	"github.com/gosom/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/cryptoext"
+	"github.com/xjock/google-maps-scraper/log"
 )
 
 // apiKeyFlash is an in-memory one-time store for newly created API keys.

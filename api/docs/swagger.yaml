@@ -173,7 +173,7 @@ host: localhost:8080
 info:
   contact:
     name: API Support
-    url: https://github.com/gosom/google-maps-scraper
+    url: https://github.com/xjock/google-maps-scraper
   description: API for scraping Google Maps data asynchronously
   license:
     name: MIT

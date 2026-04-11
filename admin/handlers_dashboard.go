@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gosom/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/log"
 )
 
 // DashboardHandler renders the admin dashboard.

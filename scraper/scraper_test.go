@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gosom/google-maps-scraper/gmaps"
 	"github.com/gosom/scrapemate"
 	"github.com/stretchr/testify/require"
+	"github.com/xjock/google-maps-scraper/gmaps"
 )
 
 func TestScraperManagerSubmitJobRequiresWriterManagedCompletion(t *testing.T) {

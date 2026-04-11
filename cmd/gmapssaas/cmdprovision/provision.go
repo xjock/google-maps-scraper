@@ -12,17 +12,17 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/gosom/google-maps-scraper/admin"
-	adminpg "github.com/gosom/google-maps-scraper/admin/postgres"
-	gocli "github.com/gosom/google-maps-scraper/cli"
-	"github.com/gosom/google-maps-scraper/cmd/gmapssaas/cmdcommon"
-	"github.com/gosom/google-maps-scraper/cryptoext"
-	"github.com/gosom/google-maps-scraper/infra"
-	"github.com/gosom/google-maps-scraper/infra/digitalocean"
-	"github.com/gosom/google-maps-scraper/infra/hetzner"
-	"github.com/gosom/google-maps-scraper/infra/vps"
-	"github.com/gosom/google-maps-scraper/migrations"
-	"github.com/gosom/google-maps-scraper/postgres"
+	"github.com/xjock/google-maps-scraper/admin"
+	adminpg "github.com/xjock/google-maps-scraper/admin/postgres"
+	gocli "github.com/xjock/google-maps-scraper/cli"
+	"github.com/xjock/google-maps-scraper/cmd/gmapssaas/cmdcommon"
+	"github.com/xjock/google-maps-scraper/cryptoext"
+	"github.com/xjock/google-maps-scraper/infra"
+	"github.com/xjock/google-maps-scraper/infra/digitalocean"
+	"github.com/xjock/google-maps-scraper/infra/hetzner"
+	"github.com/xjock/google-maps-scraper/infra/vps"
+	"github.com/xjock/google-maps-scraper/migrations"
+	"github.com/xjock/google-maps-scraper/postgres"
 )
 
 type providerResult struct {

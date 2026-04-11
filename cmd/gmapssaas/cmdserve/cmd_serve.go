@@ -10,19 +10,19 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"github.com/urfave/cli/v3"
 
-	"github.com/gosom/google-maps-scraper/admin"
-	adminpostgres "github.com/gosom/google-maps-scraper/admin/postgres"
-	"github.com/gosom/google-maps-scraper/api"
-	_ "github.com/gosom/google-maps-scraper/api/docs" // registers swagger docs
-	apipostgres "github.com/gosom/google-maps-scraper/api/postgres"
-	"github.com/gosom/google-maps-scraper/cryptoext"
-	"github.com/gosom/google-maps-scraper/env"
-	"github.com/gosom/google-maps-scraper/httpext"
-	"github.com/gosom/google-maps-scraper/log"
-	"github.com/gosom/google-maps-scraper/postgres"
-	ratelimitpostgres "github.com/gosom/google-maps-scraper/ratelimit/postgres"
-	"github.com/gosom/google-maps-scraper/rqueue"
-	saas "github.com/gosom/google-maps-scraper/saas"
+	"github.com/xjock/google-maps-scraper/admin"
+	adminpostgres "github.com/xjock/google-maps-scraper/admin/postgres"
+	"github.com/xjock/google-maps-scraper/api"
+	_ "github.com/xjock/google-maps-scraper/api/docs" // registers swagger docs
+	apipostgres "github.com/xjock/google-maps-scraper/api/postgres"
+	"github.com/xjock/google-maps-scraper/cryptoext"
+	"github.com/xjock/google-maps-scraper/env"
+	"github.com/xjock/google-maps-scraper/httpext"
+	"github.com/xjock/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/postgres"
+	ratelimitpostgres "github.com/xjock/google-maps-scraper/ratelimit/postgres"
+	"github.com/xjock/google-maps-scraper/rqueue"
+	saas "github.com/xjock/google-maps-scraper/saas"
 )
 
 var Command = &cli.Command{

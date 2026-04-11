@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
 	"github.com/google/uuid"
-	"github.com/gosom/google-maps-scraper/runner"
+	"github.com/xjock/google-maps-scraper/runner"
 )
 
 var _ runner.Runner = (*invoker)(nil)

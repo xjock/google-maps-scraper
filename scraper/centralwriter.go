@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gosom/google-maps-scraper/gmaps"
-	"github.com/gosom/google-maps-scraper/internal/jsonbsanitize"
-	"github.com/gosom/google-maps-scraper/log"
 	"github.com/gosom/scrapemate"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/xjock/google-maps-scraper/gmaps"
+	"github.com/xjock/google-maps-scraper/internal/jsonbsanitize"
+	"github.com/xjock/google-maps-scraper/log"
 )
 
 // FlushResult is sent to the River worker when results are flushed to DB.

@@ -231,7 +231,7 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 		Name:     "",
 		MaxTime:  "10m",
 		Keywords: []string{},
-		Language: "en",
+		Language: "zh-CN",
 		Zoom:     15,
 		FastMode: false,
 		Radius:   10000,
@@ -301,6 +301,9 @@ func (s *Server) scrape(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newJob.Data.Lang = r.Form.Get("lang")
+	if newJob.Data.Lang == "" {
+		newJob.Data.Lang = "zh-CN"
+	}
 
 	newJob.Data.Zoom, err = strconv.Atoi(r.Form.Get("zoom"))
 	if err != nil {
@@ -503,6 +506,10 @@ func (s *Server) apiScrape(w http.ResponseWriter, r *http.Request) {
 		Data:   req.JobData,
 	}
 
+	if newJob.Data.Lang == "" {
+		newJob.Data.Lang = "zh-CN"
+	}
+
 	// convert to seconds
 	newJob.Data.MaxTime *= time.Second
 
@@ -633,6 +640,9 @@ func securityHeaders(next http.Handler) http.Handler {
 				"img-src 'self' data: cdn.redoc.ly unpkg.com cdnjs.cloudflare.com *.tile.openstreetmap.org; "+
 				"font-src 'self' fonts.gstatic.com; "+
 				"connect-src 'self'")
+
+		// 禁用浏览器缓存，防止页面修改后还是没有改变
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
 		next.ServeHTTP(w, r)
 	})

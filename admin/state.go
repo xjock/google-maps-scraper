@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/gosom/google-maps-scraper/ratelimit"
+	"github.com/xjock/google-maps-scraper/ratelimit"
 )
 
 //go:embed templates/*.html

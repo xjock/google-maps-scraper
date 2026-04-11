@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gosom/google-maps-scraper/log"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
+	"github.com/xjock/google-maps-scraper/log"
 )
 
 // QueueMaintenance is the queue name for maintenance jobs like deletion.

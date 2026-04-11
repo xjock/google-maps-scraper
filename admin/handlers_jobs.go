@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/gosom/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/log"
 )
 
 // JobsPageHandler renders the jobs list page with state filtering and cursor pagination.

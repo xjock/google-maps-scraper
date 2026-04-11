@@ -5,6 +5,7 @@
 package grid
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
@@ -23,7 +24,6 @@ type BoundingBox struct {
 }
 
 // ParseBoundingBox parses a string with format "minLat,minLon,maxLat,maxLon".
-// Example: "40.30,-3.80,40.50,-3.60"
 func ParseBoundingBox(s string) (BoundingBox, error) {
 	parts := strings.Split(s, ",")
 	if len(parts) != 4 {
@@ -91,25 +91,127 @@ func (c Cell) GeoCoordinates() string {
 	return fmt.Sprintf("%f,%f", c.Lat, c.Lon)
 }
 
+// Point represents a geographic coordinate used for polygon calculations.
+type Point struct {
+	Lng float64 // X 轴 (116.xxx)
+	Lat float64 // Y 轴 (39.xxx)
+}
+
+// IsPointInPolygon uses the ray-casting algorithm to determine if a point is inside a polygon.
+func IsPointInPolygon(point Point, polygon []Point) bool {
+	if len(polygon) < 3 {
+		return false // A polygon must have at least 3 vertices
+	}
+	intersectCount := 0
+	for i := 0; i < len(polygon); i++ {
+		p1 := polygon[i]
+		p2 := polygon[(i+1)%len(polygon)] // next vertex, wrapping around
+
+		// 检查射线是否穿过边。
+		// 注意这里的判断逻辑：如果点的纬度 (Lat/Y) 在两点之间，
+		// 并且点的经度 (Lng/X) 小于交点的经度，则射线相交。
+		if ((p1.Lat > point.Lat) != (p2.Lat > point.Lat)) &&
+			(point.Lng < (p2.Lng-p1.Lng)*(point.Lat-p1.Lat)/(p2.Lat-p1.Lat)+p1.Lng) {
+			intersectCount++
+		}
+	}
+	return intersectCount%2 == 1
+}
+
+// ParseGeoJSONPolygon extracts a slice of Point from a standard GeoJSON string.
+func ParseGeoJSONPolygon(geoJsonStr string) ([]Point, error) {
+	if geoJsonStr == "" {
+		return nil, nil
+	}
+
+	var feature struct {
+		Geometry struct {
+			Type        string        `json:"type"`
+			Coordinates []interface{} `json:"coordinates"`
+		} `json:"geometry"`
+		Properties struct {
+			Type   string  `json:"type"`
+			Radius float64 `json:"radius"`
+		} `json:"properties"`
+	}
+
+	if err := json.Unmarshal([]byte(geoJsonStr), &feature); err != nil {
+		return nil, fmt.Errorf("failed to parse geojson: %w", err)
+	}
+
+	if feature.Geometry.Type == "Polygon" {
+		if len(feature.Geometry.Coordinates) == 0 {
+			return nil, fmt.Errorf("empty polygon coordinates")
+		}
+
+		// GeoJSON Polygon coordinates are an array of linear rings. [0] is the exterior ring.
+		rings, ok := feature.Geometry.Coordinates[0].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("invalid polygon coordinates format")
+		}
+
+		var points []Point
+		for _, pt := range rings {
+			coords, ok := pt.([]interface{})
+			if ok && len(coords) >= 2 {
+				// =========================================
+				// 修复点：明确并强制提取为 float64，防止解析成其他类型导致错乱
+				// 并且根据 GeoJSON 标准：coords[0] 是经度 (Lng), coords[1] 是纬度 (Lat)
+				// =========================================
+				var lng, lat float64
+
+				switch v := coords[0].(type) {
+				case float64:
+					lng = v
+				case int:
+					lng = float64(v)
+				}
+
+				switch v := coords[1].(type) {
+				case float64:
+					lat = v
+				case int:
+					lat = float64(v)
+				}
+
+				points = append(points, Point{Lng: lng, Lat: lat})
+			}
+		}
+		return points, nil
+	}
+
+	if feature.Geometry.Type == "Point" && feature.Properties.Type == "circle" {
+		// Native circles fallback to standard radius grid search.
+		return nil, nil
+	}
+
+	return nil, fmt.Errorf("unsupported geometry type: %s", feature.Geometry.Type)
+}
+
+// FilterCells removes cells that fall completely outside the provided GeoJSON polygon.
+func FilterCells(cells []Cell, polygon []Point) []Cell {
+	if len(polygon) == 0 {
+		return cells
+	}
+	var filtered []Cell
+	for _, c := range cells {
+		if IsPointInPolygon(Point{Lng: c.Lon, Lat: c.Lat}, polygon) {
+			filtered = append(filtered, c)
+		}
+	}
+	return filtered
+}
+
 // GenerateCells divides bbox into a grid where each cell is approximately
 // cellSizeKm × cellSizeKm. It returns the center point of every cell.
-//
-// The longitude step is adjusted for the latitude of the bounding box centre
-// so that cells are roughly square on the ground.
-//
-// Example: a 20×20 km area with cellSizeKm=1 produces ~400 cells.
 func GenerateCells(bbox BoundingBox, cellSizeKm float64) []Cell {
 	cellSizeKm = normalizeCellSizeKm(cellSizeKm)
 
-	// Latitude step is constant everywhere.
 	latStep := cellSizeKm / kmPerDegreeLat
-
-	// Longitude step varies with latitude; use the midpoint for a good estimate.
 	lonStep := calculateLonStep(bbox, cellSizeKm)
 
 	var cells []Cell
 
-	// Start at the centre of the first cell (half a step from the edge).
 	for lat := bbox.MinLat + latStep/2; lat < bbox.MaxLat; lat += latStep {
 		for lon := bbox.MinLon + lonStep/2; lon < bbox.MaxLon; lon += lonStep {
 			cells = append(cells, Cell{Lat: lat, Lon: lon})
@@ -120,7 +222,6 @@ func GenerateCells(bbox BoundingBox, cellSizeKm float64) []Cell {
 }
 
 // EstimateCellCount returns how many cells GenerateCells would produce
-// without allocating them. Useful for logging or validation.
 func EstimateCellCount(bbox BoundingBox, cellSizeKm float64) int {
 	cellSizeKm = normalizeCellSizeKm(cellSizeKm)
 

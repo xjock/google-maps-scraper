@@ -11,9 +11,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/gosom/google-maps-scraper/httpext"
-	"github.com/gosom/google-maps-scraper/log"
-	"github.com/gosom/google-maps-scraper/rqueue"
+	"github.com/xjock/google-maps-scraper/httpext"
+	"github.com/xjock/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/rqueue"
 )
 
 // IStore defines the interface for API storage operations.
@@ -52,8 +52,8 @@ func Routes(r chi.Router, appState *AppState) {
 }
 
 // healthCheckHandler godoc
-// @Summary 健康检查
-// @Description 检查 API 服务是否健康
+// @Summary Health check
+// @Description Check if the API service is healthy
 // @Tags health
 // @Produce json
 // @Success 200 {object} HealthCheckResponse
@@ -67,12 +67,12 @@ func healthCheckHandler(_ *AppState) http.HandlerFunc {
 }
 
 // scrapeHandler godoc
-// @Summary 提交抓取任务
-// @Description 提交一个新的 Google Maps 抓取任务进行处理
+// @Summary Submit a scrape job
+// @Description Submit a new Google Maps scrape job for processing
 // @Tags scrape
 // @Accept json
 // @Produce json
-// @Param request body ScrapeRequest true "抓取请求参数"
+// @Param request body ScrapeRequest true "Scrape request parameters"
 // @Success 202 {object} ScrapeResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -107,6 +107,7 @@ func scrapeHandler(appState *AppState) http.HandlerFunc {
 			MaxDepth:       req.MaxDepth,
 			Email:          req.Email,
 			GeoCoordinates: req.GeoCoordinates,
+			GeoJSON:        req.GeoJSON,
 			Zoom:           req.Zoom,
 			Radius:         req.Radius,
 			FastMode:       req.FastMode,
@@ -132,13 +133,13 @@ func scrapeHandler(appState *AppState) http.HandlerFunc {
 }
 
 // listJobsHandler godoc
-// @Summary 获取任务列表
-// @Description 分页列出所有抓取任务，支持按状态过滤
+// @Summary List jobs
+// @Description List all scrape jobs with pagination and optional state filtering
 // @Tags scrape
 // @Produce json
-// @Param state query string false "按状态过滤 (available, running, completed, cancelled, discarded, pending, retryable, scheduled)"
-// @Param limit query int false "返回的任务数量（默认：20，最大：100）"
-// @Param cursor query string false "用于分页的游标"
+// @Param state query string false "Filter by state (available, running, completed, cancelled, discarded, pending, retryable, scheduled)"
+// @Param limit query int false "Number of jobs to return (default: 20, max: 100)"
+// @Param cursor query string false "Cursor for pagination"
 // @Success 200 {object} ListJobsResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -192,11 +193,11 @@ func listJobsHandler(appState *AppState) http.HandlerFunc {
 }
 
 // getJobHandler godoc
-// @Summary 获取任务状态
-// @Description 获取抓取任务的状态和结果
+// @Summary Get job status
+// @Description Get the status and results of a scrape job
 // @Tags scrape
 // @Produce json
-// @Param job_id path string true "任务 ID"
+// @Param job_id path string true "Job ID"
 // @Success 200 {object} JobStatusResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -244,14 +245,14 @@ func getJobHandler(appState *AppState) http.HandlerFunc {
 }
 
 // deleteJobHandler godoc
-// @Summary 删除任务
-// @Description 将任务及其结果放入删除队列。运行中的任务会被优先取消。
+// @Summary Delete a job
+// @Description Queues deletion of a job and its results. Running jobs are cancelled first.
 // @Tags scrape
-// @Param job_id path string true "任务 ID"
+// @Param job_id path string true "Job ID"
 // @Success 202 {object} DeleteJobResponse
-// @Failure 400 {object} ErrorResponse "无效的任务 ID"
-// @Failure 404 {object} ErrorResponse "未找到指定任务"
-// @Failure 500 {object} ErrorResponse "服务器内部错误"
+// @Failure 400 {object} ErrorResponse "Invalid job ID"
+// @Failure 404 {object} ErrorResponse "Job not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
 // @Router /api/v1/jobs/{job_id} [delete]
 func deleteJobHandler(appState *AppState) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

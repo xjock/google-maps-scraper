@@ -3,9 +3,9 @@ package jsonbsanitize_test
 import (
 	"testing"
 
-	"github.com/gosom/google-maps-scraper/gmaps"
-	"github.com/gosom/google-maps-scraper/internal/jsonbsanitize"
 	"github.com/stretchr/testify/require"
+	"github.com/xjock/google-maps-scraper/gmaps"
+	"github.com/xjock/google-maps-scraper/internal/jsonbsanitize"
 )
 
 func TestStripNULFromEntry_NestedFields(t *testing.T) {

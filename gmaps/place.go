@@ -9,14 +9,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/gosom/scrapemate"
 
-	"github.com/gosom/google-maps-scraper/exiter"
+	"github.com/xjock/google-maps-scraper/exiter"
 )
 
 type PlaceJobOptions func(*PlaceJob)
 
 type PlaceJob struct {
 	scrapemate.Job
-
+	GeoJSON                 string // <-- 加上这行
 	UsageInResultststs      bool
 	ExtractEmail            bool
 	ExitMonitor             exiter.Exiter
@@ -292,6 +292,12 @@ func (j *PlaceJob) getReviewCount(data []byte) int {
 
 func (j *PlaceJob) UseInResults() bool {
 	return j.UsageInResultststs
+}
+
+func WithPlaceJobGeoJSON(geojson string) PlaceJobOptions {
+	return func(j *PlaceJob) {
+		j.GeoJSON = geojson
+	}
 }
 
 const js = `

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gosom/google-maps-scraper/grid"
+	"github.com/xjock/google-maps-scraper/grid"
 )
 
 func TestParseBoundingBox(t *testing.T) {

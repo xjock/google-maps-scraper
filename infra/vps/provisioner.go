@@ -8,8 +8,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/gosom/google-maps-scraper/cryptoext"
-	"github.com/gosom/google-maps-scraper/infra"
+	"github.com/xjock/google-maps-scraper/cryptoext"
+	"github.com/xjock/google-maps-scraper/infra"
 )
 
 var _ infra.Provisioner = (*provisioner)(nil)

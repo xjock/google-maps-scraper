@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gosom/google-maps-scraper/cryptoext"
-	"github.com/gosom/google-maps-scraper/log"
+	"github.com/xjock/google-maps-scraper/cryptoext"
+	"github.com/xjock/google-maps-scraper/log"
 )
 
 // dummyPasswordHash is used for constant-time comparison when user doesn't exist.

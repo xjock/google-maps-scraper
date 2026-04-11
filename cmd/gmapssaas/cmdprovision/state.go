@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gosom/google-maps-scraper/infra"
+	"github.com/xjock/google-maps-scraper/infra"
 )
 
 const (

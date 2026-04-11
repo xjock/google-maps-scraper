@@ -8,7 +8,7 @@ import (
 
 	_ "modernc.org/sqlite" // sqlite driver
 
-	"github.com/gosom/google-maps-scraper/web"
+	"github.com/xjock/google-maps-scraper/web"
 )
 
 type repo struct {
