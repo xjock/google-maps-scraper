@@ -596,6 +596,8 @@ func (c *Client) ListJobs(ctx context.Context, state string, limit int, cursor s
 
 	params := river.NewJobListParams().
 		Kinds("scrape").
+		// 修复：使用 river 包下的枚举常量
+		OrderBy(river.JobListOrderByID, river.SortOrderDesc).
 		First(limit)
 
 	// Apply state filter if provided
