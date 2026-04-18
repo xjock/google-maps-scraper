@@ -574,17 +574,30 @@
                     // 兼容旧格式（数组）和新格式（对象）
                     let pois = [];
                     let queryArea = null;
+                    let jobName = "";
+                    let jobKeywords = [];
+                    let jobLang = "";
+                    let taskZoom = null;
                     if (Array.isArray(data)) {
                         pois = data;
                     } else {
                         pois = data.pois || [];
                         queryArea = data.query_area;
+                        jobName = data.name || "";
+                        jobKeywords = data.keywords || [];
+                        jobLang = data.lang || "";
                     }
                     
-                    // 先绘制查询区域
+                    // 先绘制查询区域并同步左侧表单
                     if (queryArea) {
                         drawnItems.clearLayers();
                         currentLayer = null;
+                        
+                        let restoreLat = queryArea.lat || 0;
+                        let restoreLng = queryArea.lng || 0;
+                        let restoreRadius = queryArea.radius || 0;
+                        let restoreGeojson = queryArea.geojson || "";
+                        taskZoom = queryArea.zoom || 12;
                         
                         if (queryArea.geojson) {
                             try {
@@ -625,7 +638,25 @@
                             drawnItems.addLayer(circle);
                             currentLayer = circle;
                         }
+                        
+                        // 同步恢复左侧表单（地理相关）
+                        const latEl = document.getElementById("latitude");
+                        const lonEl = document.getElementById("longitude");
+                        const geoEl = document.getElementById("geojson");
+                        const radEl = document.getElementById("radius");
+                        if (latEl) latEl.value = restoreLat ? restoreLat.toFixed(6) : "0";
+                        if (lonEl) lonEl.value = restoreLng ? restoreLng.toFixed(6) : "0";
+                        if (geoEl) geoEl.value = restoreGeojson;
+                        if (radEl) radEl.value = Math.round(restoreRadius);
                     }
+                    
+                    // 同步恢复任务名称、关键词和语言（不依赖 queryArea）
+                    const nameEl = document.getElementById("name");
+                    const keywordsEl = document.getElementById("keywords");
+                    const langEl = document.getElementById("lang");
+                    if (nameEl) nameEl.value = jobName;
+                    if (keywordsEl) keywordsEl.value = jobKeywords.join("\n");
+                    if (langEl) langEl.value = jobLang;
                     
                     if (!pois || pois.length === 0) {
                         if (!queryArea) {
@@ -678,7 +709,20 @@
 
                     // 调整地图视图以同时包含所有 POI 和查询区域
                     if (bounds.isValid()) {
+                        window._skipZoomUpdate = true;
                         map.fitBounds(bounds, { padding: [50, 50] });
+                        if (taskZoom !== null) {
+                            setTimeout(() => {
+                                const zoomEl = document.getElementById("zoom");
+                                if (zoomEl) zoomEl.value = String(taskZoom);
+                                window._skipZoomUpdate = false;
+                            }, 500);
+                        } else {
+                            window._skipZoomUpdate = false;
+                        }
+                    } else if (taskZoom !== null) {
+                        const zoomEl = document.getElementById("zoom");
+                        if (zoomEl) zoomEl.value = String(taskZoom);
                     }
                     
                     console.log(`已加载 ${pois.length} 个 POI 到地图`);
@@ -712,7 +756,7 @@
 
                 // 加载 Google Maps 底图（使用自建瓦片服务，无需 API Key）
                 L.tileLayer(
-                    'http://82.156.104.58/vt/lyrs=m&x={x}&y={y}&z={z}',
+                    'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                     {
                         attribution: '&copy; Google Maps',
                         maxZoom: 20,
@@ -815,6 +859,7 @@
 
                 // 监听：地图层级缩放
                 map.on("zoomend", function () {
+                    if (window._skipZoomUpdate) return;
                     document.getElementById("zoom").value = map.getZoom();
                 });
 

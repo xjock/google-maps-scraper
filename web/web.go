@@ -665,6 +665,9 @@ type jobQueryArea struct {
 }
 
 type jobPOIsResponse struct {
+	Name      string        `json:"name"`
+	Keywords  []string      `json:"keywords"`
+	Lang      string        `json:"lang"`
 	QueryArea *jobQueryArea `json:"query_area,omitempty"`
 	POIs      []POIData     `json:"pois"`
 }
@@ -688,17 +691,22 @@ func (s *Server) getJobPOIs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := jobPOIsResponse{POIs: pois}
-	if jobErr == nil && (job.Data.GeoJSON != "" || (job.Data.Lat != "" && job.Data.Lon != "")) {
-		resp.QueryArea = &jobQueryArea{
-			GeoJSON: job.Data.GeoJSON,
-			Radius:  job.Data.Radius,
-			Zoom:    job.Data.Zoom,
-		}
-		if lat, err := strconv.ParseFloat(job.Data.Lat, 64); err == nil {
-			resp.QueryArea.Lat = lat
-		}
-		if lng, err := strconv.ParseFloat(job.Data.Lon, 64); err == nil {
-			resp.QueryArea.Lng = lng
+	if jobErr == nil {
+		resp.Name = job.Name
+		resp.Keywords = job.Data.Keywords
+		resp.Lang = job.Data.Lang
+		if job.Data.GeoJSON != "" || (job.Data.Lat != "" && job.Data.Lon != "") {
+			resp.QueryArea = &jobQueryArea{
+				GeoJSON: job.Data.GeoJSON,
+				Radius:  job.Data.Radius,
+				Zoom:    job.Data.Zoom,
+			}
+			if lat, err := strconv.ParseFloat(job.Data.Lat, 64); err == nil {
+				resp.QueryArea.Lat = lat
+			}
+			if lng, err := strconv.ParseFloat(job.Data.Lon, 64); err == nil {
+				resp.QueryArea.Lng = lng
+			}
 		}
 	}
 
@@ -715,7 +723,7 @@ func securityHeaders(next http.Handler) http.Handler {
 				"script-src 'self' cdn.redoc.ly cdnjs.cloudflare.com unpkg.com 'unsafe-inline' 'unsafe-eval'; "+
 				"worker-src 'self' blob:; "+
 				"style-src 'self' 'unsafe-inline' fonts.googleapis.com unpkg.com cdnjs.cloudflare.com; "+
-				"img-src 'self' data: cdn.redoc.ly unpkg.com cdnjs.cloudflare.com 82.156.104.58; "+
+				"img-src 'self' data: cdn.redoc.ly unpkg.com cdnjs.cloudflare.com 82.156.104.58 mt1.google.com; "+
 				"font-src 'self' fonts.gstatic.com; "+
 				"connect-src 'self'")
 
