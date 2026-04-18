@@ -30,7 +30,15 @@ func (s *Service) All(ctx context.Context, page int) ([]Job, error) {
 	if offset < 0 {
 		offset = 0
 	}
-	return s.repo.Select(ctx, SelectParams{Limit: limit, Offset: offset})
+	jobs, err := s.repo.Select(ctx, SelectParams{Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, err
+	}
+	// 设置每个 job 的页码，用于前端分页显示
+	for i := range jobs {
+		jobs[i].Page = page
+	}
+	return jobs, nil
 }
 
 func (s *Service) Get(ctx context.Context, id string) (Job, error) {

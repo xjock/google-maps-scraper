@@ -1,3 +1,7 @@
+{{$page := 1}}
+{{if gt (len .) 0}}
+    {{$page = (index . 0).Page}}
+{{end}}
 {{range .}}
 <tr>
     <td>{{.ID}}</td>
@@ -52,7 +56,7 @@
             ⬅️ 上一页
         </button>
         <span style="font-weight: 500; color: #333"
-            >第 <span id="current-page-text">1</span> 页</span
+            >第 <span id="current-page-text">{{$page}}</span> 页</span
         >
         <button
             type="button"
@@ -78,44 +82,57 @@
         </button>
 
         <script>
-            if (typeof window.currentPage === "undefined") {
-                window.currentPage = 1;
-            }
-            document.getElementById("current-page-text").innerText =
-                window.currentPage;
+            (function() {
+                // 从当前HTML中提取页码
+                const pageText = document.getElementById("current-page-text").innerText;
+                const currentPageFromServer = parseInt(pageText) || 1;
+                
+                // 同步到全局变量
+                window.currentPage = currentPageFromServer;
+                
+                // 更新 tbody 的 hx-get 属性
+                let tbody = document.querySelector("#job-table tbody");
+                if (tbody) {
+                    tbody.setAttribute("hx-get", "/jobs?page=" + window.currentPage);
+                    htmx.process(tbody);
+                }
 
-            if (window.currentPage <= 1) {
-                let pb = document.getElementById("prev-btn");
-                pb.disabled = true;
-                pb.style.background = "#f0f2f5";
-                pb.style.color = "#a0a0a0";
-                pb.style.borderColor = "#ccc";
-                pb.style.cursor = "not-allowed";
-            }
+                // 更新上一页按钮状态
+                if (window.currentPage <= 1) {
+                    let pb = document.getElementById("prev-btn");
+                    if (pb) {
+                        pb.disabled = true;
+                        pb.style.background = "#f0f2f5";
+                        pb.style.color = "#a0a0a0";
+                        pb.style.borderColor = "#ccc";
+                        pb.style.cursor = "not-allowed";
+                    }
+                }
 
-            let nb = document.getElementById("next-btn");
-            if (nb.hasAttribute("disabled")) {
-                nb.style.background = "#f0f2f5";
-                nb.style.color = "#a0a0a0";
-                nb.style.borderColor = "#ccc";
-                nb.style.cursor = "not-allowed";
-            }
+                // 更新下一页按钮状态
+                let nb = document.getElementById("next-btn");
+                if (nb && nb.hasAttribute("disabled")) {
+                    nb.style.background = "#f0f2f5";
+                    nb.style.color = "#a0a0a0";
+                    nb.style.borderColor = "#ccc";
+                    nb.style.cursor = "not-allowed";
+                }
+            })();
 
             window.changePage = function (delta) {
                 let newPage = window.currentPage + delta;
                 if (newPage < 1) newPage = 1;
                 if (newPage !== window.currentPage) {
                     window.currentPage = newPage;
-                    document.getElementById("current-page-text").innerText =
-                        window.currentPage;
-                    let tbody = document.querySelector("#job-table tbody");
-                    tbody.setAttribute(
-                        "hx-get",
-                        "/jobs?page=" + window.currentPage,
-                    );
-                    htmx.process(tbody);
+                    // 更新显示
+                    let pageTextEl = document.getElementById("current-page-text");
+                    if (pageTextEl) {
+                        pageTextEl.innerText = window.currentPage;
+                    }
+                    // 直接请求新页面数据
                     htmx.ajax("GET", "/jobs?page=" + window.currentPage, {
                         target: "#job-table tbody",
+                        swap: "innerHTML"
                     });
                 }
             };

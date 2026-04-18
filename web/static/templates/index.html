@@ -99,6 +99,40 @@
                 background-color: #006bce;
             }
 
+            /* 语言下拉选择器样式 */
+            .lang-select-wrapper {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+            
+            .lang-select {
+                width: 100%;
+                padding: 10px 40px 10px 12px;
+                font-size: 15px;
+                border: 1px solid #ccc;
+                border-radius: 6px;
+                background-color: white;
+                cursor: pointer;
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+            }
+            
+            .lang-select:focus {
+                outline: none;
+                border-color: #0084ff;
+                box-shadow: 0 0 0 2px rgba(0, 132, 255, 0.2);
+            }
+            
+            .lang-select-arrow {
+                position: absolute;
+                right: 12px;
+                pointer-events: none;
+                color: #666;
+                font-size: 10px;
+            }
+
             #map {
                 flex: 1;
                 width: 100%;
@@ -115,19 +149,6 @@
         <div class="app-container">
             <header>
                 <h1>🌍 跨境地图数据拾取系统</h1>
-                <nav>
-                    <a
-                        href="/api/docs"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style="
-                            color: #666;
-                            text-decoration: none;
-                            font-weight: 500;
-                        "
-                        >API 文档</a
-                    >
-                </nav>
             </header>
 
             <main>
@@ -167,16 +188,27 @@
                                 >
                             </div>
                             <div class="form-group">
-                                <label for="lang"
-                                    >结果语言 (如 zh-CN, en):</label
-                                >
-                                <input
-                                    type="text"
-                                    id="lang"
-                                    name="lang"
-                                    value="zh-CN"
-                                    placeholder="推荐使用 zh-CN 获取最准数据"
-                                />
+                                <label for="lang">结果语言:</label>
+                                <div class="lang-select-wrapper">
+                                    <select id="lang" name="lang" class="lang-select">
+                                        <option value="zh-CN" selected>🇨🇳 中文 (简体)</option>
+                                        <option value="zh-TW">🇨🇳 中文 (繁体)</option>
+                                        <option value="en">🇺🇸 English (英文)</option>
+                                        <option value="ja">🇯🇵 日本語 (日文)</option>
+                                        <option value="ko">🇰🇷 한국어 (韩文)</option>
+                                        <option value="fr">🇫🇷 Français (法文)</option>
+                                        <option value="de">🇩🇪 Deutsch (德文)</option>
+                                        <option value="es">🇪🇸 Español (西班牙文)</option>
+                                        <option value="ru">🇷🎠 Русский (俄文)</option>
+                                        <option value="it">🇮🇹 Italiano (意大利文)</option>
+                                        <option value="pt">🇵🇹 Português (葡萄牙文)</option>
+                                        <option value="ar">🇦🇪 العربية (阿拉伯文)</option>
+                                        <option value="th">🇹🇭 ไทย (泰文)</option>
+                                        <option value="vi">🇻🇳 Tiếng Việt (越南文)</option>
+                                        <option value="id">🇮🇩 Bahasa Indonesia (印尼文)</option>
+                                    </select>
+                                    <span class="lang-select-arrow">▼</span>
+                                </div>
                             </div>
                         </fieldset>
 
@@ -456,7 +488,7 @@
                                 </tr>
                             </thead>
                             <tbody
-                                hx-get="/jobs"
+                                hx-get="/jobs?page=1"
                                 hx-trigger="load, every 10s"
                             ></tbody>
                         </table>
@@ -512,13 +544,14 @@
                     initialZoom,
                 );
 
-                // 加载 OSM 免费瓦片底图
+                // 加载 Google Maps 底图（使用自建瓦片服务，无需 API Key）
                 L.tileLayer(
-                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    'http://82.156.104.58/vt/lyrs=m&x={x}&y={y}&z={z}',
                     {
-                        attribution: "&copy; OpenStreetMap",
-                        maxZoom: 19,
-                    },
+                        attribution: '&copy; Google Maps',
+                        maxZoom: 20,
+                        tileSize: 256
+                    }
                 ).addTo(map);
 
                 drawnItems = new L.FeatureGroup();
@@ -566,11 +599,36 @@
                     const layer = event.layer;
                     const type = event.layerType;
 
+                    // 清理旧图层的定时器
+                    drawnItems.eachLayer(function (oldLayer) {
+                        if (oldLayer._checkInterval) {
+                            clearInterval(oldLayer._checkInterval);
+                        }
+                    });
+
                     drawnItems.clearLayers(); // 确保地图上只有一个采集区域
                     drawnItems.addLayer(layer);
                     currentLayer = layer;
 
+                    // 添加实时编辑监听
+                    addEditListeners(layer, type);
+
                     updateFromLayer(layer, type);
+                });
+
+                // 监听：删除图形时清理
+                map.on(L.Draw.Event.DELETED, function () {
+                    drawnItems.eachLayer(function (layer) {
+                        if (layer._checkInterval) {
+                            clearInterval(layer._checkInterval);
+                        }
+                    });
+                    currentLayer = null;
+                    // 清空表单
+                    document.getElementById("latitude").value = "0";
+                    document.getElementById("longitude").value = "0";
+                    document.getElementById("geojson").value = "";
+                    document.getElementById("radius").value = "0";
                 });
 
                 // 监听：编辑已有图形（改变大小）
@@ -590,7 +648,65 @@
                 map.on("zoomend", function () {
                     document.getElementById("zoom").value = map.getZoom();
                 });
-            });
+
+                // 实时编辑更新监听
+                let editUpdateInterval = null;
+
+                // 当启用编辑模式时开始实时更新
+                map.on(L.Draw.Event.EDITSTART, function () {
+                    if (!editUpdateInterval) {
+                        editUpdateInterval = setInterval(function () {
+                            drawnItems.eachLayer(function (layer) {
+                                let type = "polygon";
+                                if (layer instanceof L.Circle) type = "circle";
+                                else if (layer instanceof L.Rectangle) type = "rectangle";
+                                updateFromLayer(layer, type);
+                            });
+                        }, 100); // 每 100ms 更新一次，实现似实时效果
+                    }
+                });
+
+                // 当编辑结束时停止实时更新
+                map.on(L.Draw.Event.EDITSTOP, function () {
+                    if (editUpdateInterval) {
+                        clearInterval(editUpdateInterval);
+                        editUpdateInterval = null;
+                    }
+                    // 最后一次更新
+                    drawnItems.eachLayer(function (layer) {
+                        let type = "polygon";
+                        if (layer instanceof L.Circle) type = "circle";
+                        else if (layer instanceof L.Rectangle) type = "rectangle";
+                        updateFromLayer(layer, type);
+                    });
+                });
+
+                // 添加图层拖拽监听
+                function addEditListeners(layer, type) {
+                    // 监听图层位置变化
+                    layer.on("drag dragend", function () {
+                        updateFromLayer(layer, type);
+                    });
+
+                    // 对于圆形，监听半径调整手柄
+                    if (type === "circle") {
+                        // 圆形特殊处理：监听调整大小
+                        layer.on("mouseover", function () {
+                            // 当鼠标悬停时检查是否在编辑
+                            layer._wasEdited = false;
+                        });
+                    }
+
+                    // 定期检查图层变化（备用机制）
+                    let lastBounds = JSON.stringify(layer.getBounds());
+                    layer._checkInterval = setInterval(function () {
+                        const currentBounds = JSON.stringify(layer.getBounds());
+                        if (currentBounds !== lastBounds) {
+                            lastBounds = currentBounds;
+                            updateFromLayer(layer, type);
+                        }
+                    }, 200);
+                }
 
             // 获取图形信息并提取 GeoJSON 字符串，同时计算外接圆半径
             function updateFromLayer(layer, type) {
@@ -790,6 +906,7 @@
                     errorSpan.style.display = "inline";
                 }
             }
+            }); // 闭合 DOMContentLoaded 事件监听器
         </script>
     </body>
 </html>

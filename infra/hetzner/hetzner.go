@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
-
 	"github.com/xjock/google-maps-scraper/infra"
 )
 

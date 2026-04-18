@@ -10,7 +10,6 @@ import (
 	"github.com/gosom/scrapemate"
 
 	"github.com/xjock/google-maps-scraper/exiter"
-	"github.com/xjock/google-maps-scraper/grid"
 )
 
 // ErrSkippedOutOfBounds is returned when a place is dropped because it's outside the defined GeoJSON boundary.
@@ -115,24 +114,8 @@ func (j *PlaceJob) Process(_ context.Context, resp *scrapemate.Response) (any, [
 		return nil, nil, err
 	}
 
-	// ==========================================
-	// 核心修复：常规模式的 GeoJSON 切割丢弃（返回 ErrSkippedOutOfBounds）
-	// ==========================================
-	if j.GeoJSON != "" {
-		polygon, parseErr := grid.ParseGeoJSONPolygon(j.GeoJSON)
-		if parseErr == nil && len(polygon) > 0 {
-			pt := grid.Point{Lng: entry.Longtitude, Lat: entry.Latitude}
-			if !grid.IsPointInPolygon(pt, polygon) {
-				// 坐标不在多边形内！
-				if j.ExitMonitor != nil && !j.WriterManagedCompletion {
-					j.ExitMonitor.IncrPlacesCompleted(1)
-				}
-				// 必须返回 error 而不是 nil，防止 CSV 写入器崩溃
-				return nil, nil, ErrSkippedOutOfBounds
-			}
-		}
-	}
-	// ==========================================
+	// 注：不再检查 GeoJSON 边界，抓取所有数据
+	// 地图绘制的区域仅用于参考，不限制抓取范围
 
 	entry.ID = j.ParentID
 

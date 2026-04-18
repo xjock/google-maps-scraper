@@ -36,6 +36,7 @@ type Job struct {
 	Date   time.Time
 	Status string
 	Data   JobData
+	Page   int // 用于分页显示，非数据库字段
 }
 
 func (j *Job) Validate() error {

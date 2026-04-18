@@ -647,12 +647,12 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'self'; "+
-				"script-src 'self' cdn.redoc.ly cdnjs.cloudflare.com unpkg.com *.amap.com 'unsafe-inline' 'unsafe-eval'; "+
+				"script-src 'self' cdn.redoc.ly cdnjs.cloudflare.com unpkg.com 'unsafe-inline' 'unsafe-eval'; "+
 				"worker-src 'self' blob:; "+
 				"style-src 'self' 'unsafe-inline' fonts.googleapis.com unpkg.com cdnjs.cloudflare.com; "+
-				"img-src 'self' data: cdn.redoc.ly unpkg.com cdnjs.cloudflare.com *.tile.openstreetmap.org *.amap.com *.autonavi.com; "+
+				"img-src 'self' data: cdn.redoc.ly unpkg.com cdnjs.cloudflare.com 82.156.104.58; "+
 				"font-src 'self' fonts.gstatic.com; "+
-				"connect-src 'self' *.amap.com *.autonavi.com")
+				"connect-src 'self'")
 
 		// 禁用浏览器缓存，防止页面修改后还是没有改变
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")

@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gosom/scrapemate"
 	"github.com/xjock/google-maps-scraper/exiter"
-	"github.com/xjock/google-maps-scraper/grid" // <-- 新增：导入我们修改过的 grid 包
 )
 
 type SearchJobOptions func(*SearchJob)
@@ -114,43 +113,8 @@ func (j *SearchJob) Process(_ context.Context, resp *scrapemate.Response) (any, 
 		return nil, nil, fmt.Errorf("failed to parse search results: %w", err)
 	}
 
-	// ==========================================
-	// 核心逻辑修改：空间边界过滤 (Spatial Filtering)
-	// ==========================================
-	if j.params.GeoJSON != "" {
-		// 1. 尝试解析 GeoJSON 多边形
-		polygon, err := grid.ParseGeoJSONPolygon(j.params.GeoJSON)
-
-		if err == nil && len(polygon) > 0 {
-			// 2. 如果是多边形或矩形，使用精准的射线法过滤
-			filtered := entries[:0] // Go 语言的高效原地(in-place)过滤切片技巧
-			for _, entry := range entries {
-				// 提取 POI 的经纬度 (假设 entry 中字段名为 Longitude 和 Latitude)
-				pt := grid.Point{Lng: entry.Longtitude, Lat: entry.Latitude}
-
-				// 仅保留在多边形内部的商家
-				if grid.IsPointInPolygon(pt, polygon) {
-					filtered = append(filtered, entry)
-				}
-			}
-			entries = filtered
-		} else {
-			// 3. 如果解析为空（说明用户画的是圆形，或者是旧版任务），回退到默认的圆形半径过滤算法
-			entries = filterAndSortEntriesWithinRadius(entries,
-				j.params.Location.Lat,
-				j.params.Location.Lon,
-				j.params.Location.Radius,
-			)
-		}
-	} else {
-		// 如果完全没有传 GeoJSON，也走默认半径过滤
-		entries = filterAndSortEntriesWithinRadius(entries,
-			j.params.Location.Lat,
-			j.params.Location.Lon,
-			j.params.Location.Radius,
-		)
-	}
-	// ==========================================
+	// 注：不再过滤区域，抓取所有数据
+	// 地图绘制的区域仅用于显示参考，不限制抓取范围
 
 	if j.ExitMonitor != nil {
 		j.ExitMonitor.IncrPlacesFound(len(entries))
@@ -161,7 +125,15 @@ func (j *SearchJob) Process(_ context.Context, resp *scrapemate.Response) (any, 
 		}
 	}
 
-	return entries, nil, nil
+	// 将 entries 逐个返回，确保每个 entry 都能被正确写入
+	var nextJobs []scrapemate.IJob
+	for _, entry := range entries {
+		// 创建一个简单的写入任务，用于将 entry 写入结果
+		writeJob := NewWriteEntryJob(entry)
+		nextJobs = append(nextJobs, writeJob)
+	}
+
+	return nil, nextJobs, nil
 }
 
 func removeFirstLine(data []byte) []byte {
