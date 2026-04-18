@@ -99,6 +99,31 @@
                 background-color: #006bce;
             }
 
+            /* POI 标记样式 */
+            .poi-marker {
+                background: transparent;
+                border: none;
+            }
+            .poi-pin {
+                width: 24px;
+                height: 24px;
+                background: #ff4444;
+                border-radius: 50% 50% 50% 0;
+                transform: rotate(-45deg);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 11px;
+                font-weight: bold;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                border: 2px solid white;
+            }
+            .poi-pin:hover {
+                background: #ff6666;
+                transform: rotate(-45deg) scale(1.1);
+            }
+
             /* 语言下拉选择器样式 */
             .lang-select-wrapper {
                 position: relative;
@@ -503,6 +528,7 @@
         <script>
             let map;
             let drawnItems;
+            let poiMarkers = null; // POI 标记层
             let currentLayer = null;
 
             // 汉化 Leaflet.draw 的提示语言
@@ -527,6 +553,76 @@
             L.drawLocal.edit.toolbar.actions.cancel.text = "取消";
             L.drawLocal.edit.handlers.edit.tooltip.text = "拖拽节点以编辑形状";
             L.drawLocal.edit.handlers.remove.tooltip.text = "点击形状将其删除";
+
+            // 加载并显示任务的 POI 数据到地图
+            // 放在 DOMContentLoaded 外部，确保 onclick 可以调用
+            window.loadJobPOIs = async function(jobId) {
+                if (!poiMarkers) {
+                    console.warn('地图未初始化');
+                    return;
+                }
+                
+                // 清除旧的标记
+                poiMarkers.clearLayers();
+                
+                try {
+                    const response = await fetch(`/api/v1/jobs/${jobId}/pois`);
+                    if (!response.ok) return;
+                    
+                    const pois = await response.json();
+                    if (!pois || pois.length === 0) {
+                        alert('该任务暂无 POI 数据');
+                        return;
+                    }
+                    
+                    const bounds = L.latLngBounds();
+                    
+                    pois.forEach((poi, index) => {
+                        if (poi.lat && poi.lng) {
+                            // 创建标记
+                            const marker = L.marker([poi.lat, poi.lng], {
+                                icon: L.divIcon({
+                                    className: 'poi-marker',
+                                    html: `<div class="poi-pin">${index + 1}</div>`,
+                                    iconSize: [24, 24],
+                                    iconAnchor: [12, 24]
+                                })
+                            });
+                            
+                            // 创建弹窗内容
+                            const popupContent = `
+                                <div style="min-width: 200px;">
+                                    <h4 style="margin: 0 0 8px 0; color: #0084ff;">${poi.name || '未命名'}</h4>
+                                    <p style="margin: 4px 0; font-size: 12px; color: #666;">✉️ ${poi.address || '无地址'}</p>
+                                    ${poi.phone ? `<p style="margin: 4px 0; font-size: 12px;">📞 ${poi.phone}</p>` : ''}
+                                    ${poi.website ? `<p style="margin: 4px 0; font-size: 12px;"><a href="${poi.website}" target="_blank">🔗 网站</a></p>` : ''}
+                                    ${poi.rating ? `<p style="margin: 4px 0; font-size: 12px;">⭐ ${poi.rating}</p>` : ''}
+                                </div>
+                            `;
+                            
+                            marker.bindPopup(popupContent);
+                            marker.addTo(poiMarkers);
+                            bounds.extend([poi.lat, poi.lng]);
+                        }
+                    });
+                    
+                    // 如果有数据，调整地图视图以包含所有 POI
+                    if (bounds.isValid()) {
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                    
+                    console.log(`已加载 ${pois.length} 个 POI 到地图`);
+                } catch (err) {
+                    console.error('加载 POI 失败:', err);
+                }
+            };
+
+            // 清除地图上的 POI 标记
+            window.clearJobPOIs = function() {
+                if (poiMarkers) {
+                    poiMarkers.clearLayers();
+                }
+            };
 
             document.addEventListener("DOMContentLoaded", function () {
                 const latInput = document.getElementById("latitude");
@@ -556,6 +652,9 @@
 
                 drawnItems = new L.FeatureGroup();
                 map.addLayer(drawnItems);
+
+                // 初始化 POI 标记层
+                poiMarkers = L.layerGroup().addTo(map);
 
                 // 配置左侧的画图控制面板
                 const drawControl = new L.Control.Draw({

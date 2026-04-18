@@ -118,6 +118,22 @@ func New(svc *Service, addr string) (*Server, error) {
 		ans.download(w, r)
 	})
 
+	// 获取任务的 POI 数据（用于地图展示）
+	mux.HandleFunc("/api/v1/jobs/{id}/pois", func(w http.ResponseWriter, r *http.Request) {
+		r = requestWithID(r)
+
+		if r.Method != http.MethodGet {
+			ans := apiError{
+				Code:    http.StatusMethodNotAllowed,
+				Message: "Method not allowed",
+			}
+			renderJSON(w, http.StatusMethodNotAllowed, ans)
+			return
+		}
+
+		ans.getJobPOIs(w, r)
+	})
+
 	handler := securityHeaders(mux)
 	ans.srv.Handler = handler
 
@@ -638,6 +654,27 @@ func renderJSON(w http.ResponseWriter, code int, data any) {
 
 func formatDate(t time.Time) string {
 	return t.Format("Jan 02, 2006 15:04:05")
+}
+
+func (s *Server) getJobPOIs(w http.ResponseWriter, r *http.Request) {
+	id, ok := getIDFromRequest(r)
+	if !ok {
+		apiError := apiError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "Invalid ID",
+		}
+		renderJSON(w, http.StatusUnprocessableEntity, apiError)
+		return
+	}
+
+	pois, err := s.svc.GetPOIData(r.Context(), id.String())
+	if err != nil {
+		// 如果文件不存在或读取失败，返回空数组
+		renderJSON(w, http.StatusOK, []POIData{})
+		return
+	}
+
+	renderJSON(w, http.StatusOK, pois)
 }
 
 func securityHeaders(next http.Handler) http.Handler {

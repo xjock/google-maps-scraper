@@ -3,7 +3,7 @@
     {{$page = (index . 0).Page}}
 {{end}}
 {{range .}}
-<tr>
+<tr data-job-id="{{.ID}}">
     <td>{{.ID}}</td>
     <td>{{.Name}}</td>
     <td>{{.Date}}</td>
@@ -15,6 +15,14 @@
         <a href="/download?id={{.ID}}" download class="button download-button"
             >下载</a
         >
+        <button
+            type="button"
+            class="button show-map-button"
+            onclick="loadJobPOIs('{{.ID}}')"
+            title="在地图上显示抓取的兴趣点"
+        >
+            📍 地图
+        </button>
         {{ end }}
         <button
             hx-delete="/delete?id={{.ID}}"

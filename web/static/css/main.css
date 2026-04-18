@@ -224,12 +224,15 @@ th {
     color: white;
 }
 
-.download-button, .delete-button {
+.download-button, .delete-button, .show-map-button {
     padding: 6px 12px;
     border-radius: 4px;
     font-size: 12px;
     text-decoration: none;
     color: white;
+    border: none;
+    cursor: pointer;
+    margin-right: 4px;
 }
 
 .download-button {
@@ -238,6 +241,14 @@ th {
 
 .delete-button {
     background-color: var(--color-error);
+}
+
+.show-map-button {
+    background-color: #0084ff;
+}
+
+.show-map-button:hover {
+    background-color: #006bce;
 }
 
 .error-message {
