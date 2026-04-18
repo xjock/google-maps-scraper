@@ -125,15 +125,7 @@ func (j *SearchJob) Process(_ context.Context, resp *scrapemate.Response) (any, 
 		}
 	}
 
-	// 将 entries 逐个返回，确保每个 entry 都能被正确写入
-	var nextJobs []scrapemate.IJob
-	for _, entry := range entries {
-		// 创建一个简单的写入任务，用于将 entry 写入结果
-		writeJob := NewWriteEntryJob(entry)
-		nextJobs = append(nextJobs, writeJob)
-	}
-
-	return nil, nextJobs, nil
+	return entries, nil, nil
 }
 
 func removeFirstLine(data []byte) []byte {
