@@ -569,9 +569,68 @@
                     const response = await fetch(`/api/v1/jobs/${jobId}/pois`);
                     if (!response.ok) return;
                     
-                    const pois = await response.json();
+                    const data = await response.json();
+                    
+                    // 兼容旧格式（数组）和新格式（对象）
+                    let pois = [];
+                    let queryArea = null;
+                    if (Array.isArray(data)) {
+                        pois = data;
+                    } else {
+                        pois = data.pois || [];
+                        queryArea = data.query_area;
+                    }
+                    
+                    // 先绘制查询区域
+                    if (queryArea) {
+                        drawnItems.clearLayers();
+                        currentLayer = null;
+                        
+                        if (queryArea.geojson) {
+                            try {
+                                const geojson = JSON.parse(queryArea.geojson);
+                                let newLayer;
+                                if (geojson.properties && geojson.properties.type === "circle") {
+                                    const coords = geojson.geometry.coordinates;
+                                    newLayer = L.circle([coords[1], coords[0]], {
+                                        radius: geojson.properties.radius,
+                                        color: "#0084ff",
+                                        weight: 2,
+                                        fillOpacity: 0.15,
+                                    });
+                                } else {
+                                    const gjLayer = L.geoJSON(geojson, {
+                                        style: {
+                                            color: "#0084ff",
+                                            weight: 2,
+                                            fillOpacity: 0.15,
+                                        },
+                                    });
+                                    newLayer = gjLayer.getLayers()[0];
+                                }
+                                if (newLayer) {
+                                    drawnItems.addLayer(newLayer);
+                                    currentLayer = newLayer;
+                                }
+                            } catch (e) {
+                                console.error("解析查询区域 GeoJSON 失败:", e);
+                            }
+                        } else if (queryArea.lat && queryArea.lng && queryArea.radius > 0) {
+                            const circle = L.circle([queryArea.lat, queryArea.lng], {
+                                radius: queryArea.radius,
+                                color: "#0084ff",
+                                weight: 2,
+                                fillOpacity: 0.15,
+                            });
+                            drawnItems.addLayer(circle);
+                            currentLayer = circle;
+                        }
+                    }
+                    
                     if (!pois || pois.length === 0) {
-                        alert('该任务暂无 POI 数据');
+                        if (!queryArea) {
+                            alert('该任务暂无 POI 数据');
+                        }
                         return;
                     }
                     
@@ -606,7 +665,18 @@
                         }
                     });
                     
-                    // 如果有数据，调整地图视图以包含所有 POI
+                    // 同时包含查询区域（drawnItems）的边界
+                    if (drawnItems && drawnItems.getLayers().length > 0) {
+                        drawnItems.eachLayer(function(layer) {
+                            if (layer.getBounds) {
+                                bounds.extend(layer.getBounds());
+                            } else if (layer.getLatLng) {
+                                bounds.extend(layer.getLatLng());
+                            }
+                        });
+                    }
+
+                    // 调整地图视图以同时包含所有 POI 和查询区域
                     if (bounds.isValid()) {
                         map.fitBounds(bounds, { padding: [50, 50] });
                     }

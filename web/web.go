@@ -656,6 +656,19 @@ func formatDate(t time.Time) string {
 	return t.Format("Jan 02, 2006 15:04:05")
 }
 
+type jobQueryArea struct {
+	GeoJSON string  `json:"geojson"`
+	Lat     float64 `json:"lat"`
+	Lng     float64 `json:"lng"`
+	Radius  int     `json:"radius"`
+	Zoom    int     `json:"zoom"`
+}
+
+type jobPOIsResponse struct {
+	QueryArea *jobQueryArea `json:"query_area,omitempty"`
+	POIs      []POIData     `json:"pois"`
+}
+
 func (s *Server) getJobPOIs(w http.ResponseWriter, r *http.Request) {
 	id, ok := getIDFromRequest(r)
 	if !ok {
@@ -667,14 +680,29 @@ func (s *Server) getJobPOIs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	job, jobErr := s.svc.Get(r.Context(), id.String())
+
 	pois, err := s.svc.GetPOIData(r.Context(), id.String())
 	if err != nil {
-		// 如果文件不存在或读取失败，返回空数组
-		renderJSON(w, http.StatusOK, []POIData{})
-		return
+		pois = []POIData{}
 	}
 
-	renderJSON(w, http.StatusOK, pois)
+	resp := jobPOIsResponse{POIs: pois}
+	if jobErr == nil && (job.Data.GeoJSON != "" || (job.Data.Lat != "" && job.Data.Lon != "")) {
+		resp.QueryArea = &jobQueryArea{
+			GeoJSON: job.Data.GeoJSON,
+			Radius:  job.Data.Radius,
+			Zoom:    job.Data.Zoom,
+		}
+		if lat, err := strconv.ParseFloat(job.Data.Lat, 64); err == nil {
+			resp.QueryArea.Lat = lat
+		}
+		if lng, err := strconv.ParseFloat(job.Data.Lon, 64); err == nil {
+			resp.QueryArea.Lng = lng
+		}
+	}
+
+	renderJSON(w, http.StatusOK, resp)
 }
 
 func securityHeaders(next http.Handler) http.Handler {
